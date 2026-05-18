@@ -1,0 +1,31 @@
+{
+  "name": "remotion-engine",
+  "version": "1.0.0",
+  "description": "Motor de renderizado de videos con Remotion — sin interfaz visual",
+  "main": "index.js",
+  "scripts": {
+    "render": "NODE_OPTIONS=--use-system-ca tsx src/render.ts",
+    "render:hello": "NODE_OPTIONS=--use-system-ca tsx src/render.ts HelloWorld out/hello.mp4",
+    "studio": "remotion studio src/Root.tsx",
+    "build": "tsc"
+  },
+  "keywords": [],
+  "author": "facuguz55",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@remotion/cli": "^4.0.462",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "remotion": "^4.0.462"
+  },
+  "devDependencies": {
+    "@remotion/bundler": "^4.0.462",
+    "@remotion/renderer": "^4.0.462",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.22.2",
+    "typescript": "^6.0.3"
+  }
+}
