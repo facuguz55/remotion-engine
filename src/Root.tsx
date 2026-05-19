@@ -2,6 +2,7 @@ import React from "react";
 import { Composition, registerRoot } from "remotion";
 import { HelloWorld } from "./compositions/HelloWorld";
 import { RightBotinesVideo } from "./compositions/right-botines/RightBotinesVideo";
+import { RightBotinesVertical } from "./compositions/right-botines-vertical/RightBotinesVertical";
 import { DURATIONS } from "./compositions/right-botines/constants";
 
 const RemotionRoot: React.FC = () => {
@@ -23,6 +24,14 @@ const RemotionRoot: React.FC = () => {
         fps={30}
         width={1920}
         height={1080}
+      />
+      <Composition
+        id="RightBotinesVertical"
+        component={RightBotinesVertical}
+        durationInFrames={DURATIONS.total}
+        fps={30}
+        width={1080}
+        height={1920}
       />
     </>
   );

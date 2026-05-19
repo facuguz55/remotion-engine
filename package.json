@@ -7,6 +7,7 @@
     "render": "NODE_OPTIONS=--use-system-ca tsx src/render.ts",
     "render:hello": "NODE_OPTIONS=--use-system-ca tsx src/render.ts HelloWorld out/hello.mp4",
     "render:right-botines": "NODE_OPTIONS=--use-system-ca tsx src/render.ts RightBotines out/right-botines.mp4",
+    "render:right-botines-vertical": "NODE_OPTIONS=--use-system-ca tsx src/render.ts RightBotinesVertical out/right-botines-vertical.mp4",
     "studio": "remotion studio src/Root.tsx",
     "build": "tsc"
   },
