@@ -6,6 +6,11 @@ import { RightBotinesVertical } from "./compositions/right-botines-vertical/Righ
 import { DURATIONS } from "./compositions/right-botines/constants";
 import { NorthzoneVideo } from "./compositions/northzone/NorthzoneVideo";
 import { DURATIONS as NZ_DURATIONS } from "./compositions/northzone/constants";
+import {
+  AgencyVideo,
+  calculateMetadata as agencyCalcMetadata,
+  DEFAULT_AGENCY_PROPS,
+} from "./compositions/agency-video/AgencyVideo";
 
 const RemotionRoot: React.FC = () => {
   return (
@@ -42,6 +47,16 @@ const RemotionRoot: React.FC = () => {
         fps={30}
         width={1920}
         height={1080}
+      />
+      <Composition
+        id="AgencyVideo"
+        component={AgencyVideo}
+        durationInFrames={DEFAULT_AGENCY_PROPS.slides.length * 90}
+        fps={30}
+        width={1080}
+        height={1920}
+        defaultProps={DEFAULT_AGENCY_PROPS}
+        calculateMetadata={agencyCalcMetadata}
       />
     </>
   );

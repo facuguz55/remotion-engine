@@ -9,6 +9,7 @@
     "render:right-botines": "NODE_OPTIONS=--use-system-ca tsx src/render.ts RightBotines out/right-botines.mp4",
     "render:right-botines-vertical": "NODE_OPTIONS=--use-system-ca tsx src/render.ts RightBotinesVertical out/right-botines-vertical.mp4",
     "render:northzone": "NODE_OPTIONS=--use-system-ca tsx src/render.ts NorthzoneVideo out/northzone.mp4",
+    "worker": "NODE_OPTIONS=--use-system-ca tsx src/worker.ts",
     "studio": "remotion studio src/Root.tsx",
     "build": "tsc"
   },
@@ -17,7 +18,10 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.54.0",
     "@remotion/cli": "^4.0.462",
+    "@supabase/supabase-js": "^2.49.8",
+    "dotenv": "^16.5.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "remotion": "^4.0.462"
