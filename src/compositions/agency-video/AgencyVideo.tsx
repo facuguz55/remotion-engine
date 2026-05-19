@@ -10,7 +10,7 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from 'remotion'
-import { FRAMES_PER_SLIDE, TRANSITION_FRAMES, GOOGLE_FONTS } from './constants'
+import { FRAMES_PER_SLIDE, TRANSITION_FRAMES, GOOGLE_FONTS, FORMAT_DIMENSIONS, type VideoFormat } from './constants'
 
 export interface Slide {
   title: string
@@ -24,6 +24,7 @@ export interface AgencyVideoProps {
   slides: Slide[]
   brandColor1: string
   brandColor2: string
+  format?: VideoFormat
 }
 
 export const DEFAULT_AGENCY_PROPS: AgencyVideoProps = {
@@ -31,6 +32,7 @@ export const DEFAULT_AGENCY_PROPS: AgencyVideoProps = {
   template: 'prospecto',
   brandColor1: '#ff8c42',
   brandColor2: '#f97316',
+  format: 'vertical',
   slides: [
     { title: '*Nova Agency* arranca con vos', body: 'Agencia de marketing digital de alto impacto', highlight: 'NOVA AGENCY' },
     { title: '¿Tu marca *no está creciendo*?', body: 'El 80% de las marcas pierden ventas por no tener una presencia sólida' },
@@ -39,12 +41,15 @@ export const DEFAULT_AGENCY_PROPS: AgencyVideoProps = {
   ],
 }
 
-export const calculateMetadata: CalculateMetadataFunction<AgencyVideoProps> = ({ props }) => ({
-  durationInFrames: props.slides.length * FRAMES_PER_SLIDE,
-  fps: 30,
-  width: 1080,
-  height: 1920,
-})
+export const calculateMetadata: CalculateMetadataFunction<AgencyVideoProps> = ({ props }) => {
+  const dims = FORMAT_DIMENSIONS[props.format ?? 'vertical']
+  return {
+    durationInFrames: props.slides.length * FRAMES_PER_SLIDE,
+    fps: 30,
+    width: dims.width,
+    height: dims.height,
+  }
+}
 
 const SlideScene: React.FC<{
   slide: Slide
@@ -58,17 +63,24 @@ const SlideScene: React.FC<{
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()
 
-  const fadeIn = interpolate(frame, [0, TRANSITION_FRAMES], [0, 1], { extrapolateRight: 'clamp' })
+  const fadeIn  = interpolate(frame, [0, TRANSITION_FRAMES], [0, 1], { extrapolateRight: 'clamp' })
   const fadeOut = interpolate(frame, [FRAMES_PER_SLIDE - TRANSITION_FRAMES, FRAMES_PER_SLIDE], [1, 0], { extrapolateLeft: 'clamp' })
   const opacity = fadeIn * fadeOut
 
-  // Parse words — *word* = accent color
   const words = slide.title.split(' ')
+
+  // Frame at which the first title word starts animating
+  const textStartFrame = isFirst || isLast ? 22 : 14
 
   const barOpacity = interpolate(frame, [10, 26], [0, 0.85], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })
 
   return (
     <AbsoluteFill style={{ opacity }}>
+      {/* Pop sound when text appears */}
+      <Sequence from={textStartFrame} durationInFrames={10}>
+        <Audio src={staticFile('sounds/pop.mp3')} volume={0.55} />
+      </Sequence>
+
       {/* Background */}
       <div style={{
         position: 'absolute', inset: 0,
@@ -159,10 +171,11 @@ const SlideScene: React.FC<{
           {words.map((word, i) => {
             const isAccent = word.startsWith('*') && word.endsWith('*')
             const displayWord = isAccent ? word.slice(1, -1) : word
-            const delay = (isFirst || isLast) ? 22 + i * 11 : 14 + i * 9
-            const spr = spring({ frame: frame - delay, fps, config: { damping: 14, stiffness: 95 } })
-            const wordY = interpolate(spr, [0, 1], [52, 0])
-            const wordOp = interpolate(frame - delay, [0, 13], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })
+            const delay = textStartFrame + i * 9
+            const spr = spring({ frame: frame - delay, fps, config: { damping: 16, stiffness: 100 } })
+            const wordY  = interpolate(spr, [0, 1], [48, 0])
+            const wordSc = interpolate(spr, [0, 1], [0.88, 1])
+            const wordOp = interpolate(frame - delay, [0, 10], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })
             const fontSize = words.length <= 3 ? 114 : words.length <= 5 ? 96 : words.length <= 7 ? 82 : 68
 
             return (
@@ -173,7 +186,8 @@ const SlideScene: React.FC<{
                 color: isAccent ? brandColor1 : '#f0f6ff',
                 lineHeight: 1.06,
                 letterSpacing: -3,
-                transform: `translateY(${wordY}px)`,
+                transform: `translateY(${wordY}px) scale(${wordSc})`,
+                transformOrigin: 'left bottom',
                 opacity: wordOp,
                 textShadow: isAccent
                   ? `0 0 80px ${brandColor1}55, 0 2px 30px rgba(0,0,0,0.6)`
@@ -195,8 +209,8 @@ const SlideScene: React.FC<{
             maxWidth: 880,
             margin: 0,
             fontWeight: 400,
-            opacity: interpolate(frame, [26 + words.length * 9, 46 + words.length * 9], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
-            transform: `translateY(${interpolate(frame, [26 + words.length * 9, 46 + words.length * 9], [18, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })}px)`,
+            opacity: interpolate(frame, [textStartFrame + words.length * 9, textStartFrame + words.length * 9 + 18], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
+            transform: `translateY(${interpolate(frame, [textStartFrame + words.length * 9, textStartFrame + words.length * 9 + 18], [18, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })}px)`,
           }}>
             {slide.body}
           </p>
@@ -209,8 +223,8 @@ const SlideScene: React.FC<{
             border: `1px solid ${brandColor1}55`,
             borderRadius: 14,
             padding: '14px 38px',
-            opacity: interpolate(frame, [44 + words.length * 9, 64 + words.length * 9], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
-            transform: `translateY(${interpolate(frame, [44 + words.length * 9, 64 + words.length * 9], [16, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })}px)`,
+            opacity: interpolate(frame, [textStartFrame + words.length * 9 + 18, textStartFrame + words.length * 9 + 38], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
+            transform: `translateY(${interpolate(frame, [textStartFrame + words.length * 9 + 18, textStartFrame + words.length * 9 + 38], [16, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })}px)`,
           }}>
             <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 36, color: brandColor1, fontWeight: 700 }}>
               {slide.highlight}
@@ -223,23 +237,18 @@ const SlideScene: React.FC<{
 }
 
 export const AgencyVideo: React.FC<AgencyVideoProps> = ({
-  clientName, template, slides, brandColor1, brandColor2,
+  clientName, template, slides, brandColor1, brandColor2, format = 'vertical',
 }) => {
   return (
     <AbsoluteFill style={{ background: '#050c14' }}>
       <style>{GOOGLE_FONTS}</style>
 
-      {/* Impact sound on first frame */}
-      <Sequence from={0} durationInFrames={48}>
-        <Audio src={staticFile('sounds/impact.mp3')} volume={0.65} />
-      </Sequence>
-
-      {/* Swoosh on each slide transition */}
-      {slides.map((_, i) => i > 0 ? (
-        <Sequence key={`swoosh-${i}`} from={i * FRAMES_PER_SLIDE} durationInFrames={22}>
-          <Audio src={staticFile('sounds/swoosh.mp3')} volume={0.5} />
+      {/* Whoosh on every slide transition (including the first) */}
+      {slides.map((_, i) => (
+        <Sequence key={`whoosh-${i}`} from={i * FRAMES_PER_SLIDE} durationInFrames={20}>
+          <Audio src={staticFile('sounds/whoosh.mp3')} volume={i === 0 ? 0.4 : 0.55} />
         </Sequence>
-      ) : null)}
+      ))}
 
       {/* Slide sequences */}
       {slides.map((slide, i) => (
