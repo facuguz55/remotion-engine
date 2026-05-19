@@ -4,6 +4,8 @@ import { HelloWorld } from "./compositions/HelloWorld";
 import { RightBotinesVideo } from "./compositions/right-botines/RightBotinesVideo";
 import { RightBotinesVertical } from "./compositions/right-botines-vertical/RightBotinesVertical";
 import { DURATIONS } from "./compositions/right-botines/constants";
+import { NorthzoneVideo } from "./compositions/northzone/NorthzoneVideo";
+import { DURATIONS as NZ_DURATIONS } from "./compositions/northzone/constants";
 
 const RemotionRoot: React.FC = () => {
   return (
@@ -32,6 +34,14 @@ const RemotionRoot: React.FC = () => {
         fps={30}
         width={1080}
         height={1920}
+      />
+      <Composition
+        id="NorthzoneVideo"
+        component={NorthzoneVideo}
+        durationInFrames={NZ_DURATIONS.total}
+        fps={30}
+        width={1920}
+        height={1080}
       />
     </>
   );
