@@ -31,16 +31,22 @@ async function generateSlides(job: Record<string, unknown>, client: Record<strin
     ? `INSTRUCCIONES DE EDICIÓN: ${extraInfo}. Tomá como base estos slides anteriores y modificalos: ${JSON.stringify((job.props as Record<string, unknown>)?.previous_slides)}`
     : extraInfo
 
-  const systemPrompt = `Sos un experto en marketing digital. Generás scripts de videos cortos y poderosos para Instagram/TikTok (4-6 slides, video vertical 1080x1920).
+  const systemPrompt = `Sos un experto en marketing digital. Generás scripts de videos cortos y poderosos para redes sociales (4-6 slides).
 
-Cada slide tiene:
+Cada slide tiene estos campos:
 - title: texto impactante (máx 8 palabras). Usá *asteriscos* para resaltar 1-2 palabras clave con el color de la marca.
 - body: texto secundario opcional (máx 18 palabras, dato o explicación concisa)
-- highlight: texto corto opcional para badge (ej: "3X ROI", "RESULTADOS", "@novaagency")
+- highlight: badge corto opcional (ej: "3X ROI", "RESULTADOS", "@novaagency")
+- graphic: objeto opcional con métricas o features animadas para slides de contenido (NO en el primero ni el último)
+  - type: "stats" (tarjetas de métricas con números), "bars" (barras comparativas), "list" (lista de features)
+  - items: array de { label: string, value: string, icon?: emoji }
+  - Para "stats": máximo 3 items con valores concretos (ej: "+150%", "×3", "2.400")
+  - Para "list": máximo 4 items (ej: { label: "Contenido diario", icon: "✅" })
 
 Reglas:
-- Primer slide: hook poderoso que engancha en 2 segundos
-- Último slide: CTA claro ("¿Arrancamos?", "Escribinos hoy", etc.)
+- Primer slide: hook poderoso que engancha en 2 segundos (sin graphic)
+- Último slide: CTA claro — "¿Arrancamos?", "Escribinos hoy", etc. (sin graphic)
+- Slides del medio: usá graphic cuando tenés datos concretos o features para mostrar
 - Español rioplatense (vos, no tú)
 - Máx 6 slides, mín 4
 - Respondé SOLO con JSON válido, sin markdown: { "slides": [...] }`
@@ -88,6 +94,13 @@ async function processJob(job: Record<string, unknown>) {
 
     const slides = await generateSlides(job, client, project)
     console.log(`✅ ${slides.length} slides generados`)
+
+    // Check cancellation before expensive render
+    const { data: statusCheck } = await supabase.from('video_jobs').select('status').eq('id', job.id).single()
+    if (statusCheck?.status === 'cancelled') {
+      console.log(`⏹️  Job ${job.id} cancelado antes de renderizar`)
+      return
+    }
 
     const brandColor1 = client.has_brand_colors && client.brand_color1 ? client.brand_color1 : '#ff8c42'
     const brandColor2 = client.has_brand_colors && client.brand_color2 ? client.brand_color2 : '#f97316'
