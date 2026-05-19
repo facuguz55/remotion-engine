@@ -3,6 +3,7 @@ import {
   AbsoluteFill,
   Audio,
   type CalculateMetadataFunction,
+  Img,
   Sequence,
   interpolate,
   spring,
@@ -37,6 +38,7 @@ export interface AgencyVideoProps {
   brandColor1: string
   brandColor2: string
   format?: VideoFormat
+  clientImageUrl?: string | null
 }
 
 export const DEFAULT_AGENCY_PROPS: AgencyVideoProps = {
@@ -253,7 +255,8 @@ const SlideScene: React.FC<{
   brandColor2: string
   slideIndex: number
   totalSlides: number
-}> = ({ slide, isFirst, isLast, brandColor1, brandColor2, slideIndex, totalSlides }) => {
+  clientImageUrl?: string | null
+}> = ({ slide, isFirst, isLast, brandColor1, brandColor2, slideIndex, totalSlides, clientImageUrl }) => {
   const frame = useCurrentFrame()
   const { fps, width, height } = useVideoConfig()
 
@@ -305,11 +308,27 @@ const SlideScene: React.FC<{
       )}
 
       {/* ── Backgrounds ── */}
+      <div style={{ position: 'absolute', inset: 0, background: '#050c14' }} />
+
+      {/* Client image as subtle background */}
+      {clientImageUrl && (
+        <Img
+          src={clientImageUrl}
+          style={{
+            position: 'absolute', inset: 0,
+            width: '100%', height: '100%',
+            objectFit: 'cover',
+            opacity: isFirst || isLast ? 0.1 : 0.06,
+            filter: 'blur(18px) saturate(1.8)',
+          }}
+        />
+      )}
+
       <div style={{
         position: 'absolute', inset: 0,
         background: isFirst || isLast
           ? `radial-gradient(ellipse at 50% 35%, ${brandColor1}28 0%, #050c14 60%)`
-          : '#050c14',
+          : 'linear-gradient(180deg, #050c14cc 0%, #050c14aa 50%, #050c14cc 100%)',
       }} />
       <div style={{
         position: 'absolute', inset: 0,
@@ -458,7 +477,7 @@ const SlideScene: React.FC<{
 
 // ── Main composition ─────────────────────────────────────────────────────────
 export const AgencyVideo: React.FC<AgencyVideoProps> = ({
-  clientName, template, slides, brandColor1, brandColor2, format = 'vertical',
+  clientName, template, slides, brandColor1, brandColor2, format = 'vertical', clientImageUrl,
 }) => {
   return (
     <AbsoluteFill style={{ background: '#050c14' }}>
@@ -482,6 +501,7 @@ export const AgencyVideo: React.FC<AgencyVideoProps> = ({
             brandColor2={brandColor2}
             slideIndex={i}
             totalSlides={slides.length}
+            clientImageUrl={clientImageUrl}
           />
         </Sequence>
       ))}

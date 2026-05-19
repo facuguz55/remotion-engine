@@ -103,9 +103,17 @@ async function processJob(job: Record<string, unknown>) {
     }
 
     const brandColor1 = client.has_brand_colors && client.brand_color1 ? client.brand_color1 : '#ff8c42'
-    const brandColor2 = client.has_brand_colors && client.brand_color2 ? client.brand_color2 : '#f97316'
+    const brandColor2 = client.has_brand_colors && client.brand_color2 ? client.brand_color2 : '#6366f1'
 
-    const inputProps = { clientName: client.name, template: job.template, slides, brandColor1, brandColor2, format: ((job.props as Record<string, unknown>)?.format as string) || 'vertical' }
+    const inputProps = {
+      clientName: client.name,
+      template: job.template,
+      slides,
+      brandColor1,
+      brandColor2,
+      format: ((job.props as Record<string, unknown>)?.format as string) || 'vertical',
+      clientImageUrl: (client.photo_url as string) || null,
+    }
 
     await supabase.from('video_jobs').update({
       props: { ...(job.props as Record<string, unknown>), generated_slides: slides, input_props: inputProps },
