@@ -2,8 +2,15 @@ import React from "react";
 import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
 import { C, FONT } from "./constants";
 
-// Altura fija del área de teléfonos dentro del grid
 const PHONE_H = 700;
+
+const BG_PARTICLES = Array.from({ length: 28 }, (_, i) => ({
+  x: ((i * 71.3 + 17) % 100),
+  y: ((i * 43.7 + 29) % 100),
+  size: 1.5 + (i % 3),
+  color: i % 3 === 0 ? "#00c8d4" : i % 3 === 1 ? "#ff6b35" : "#8899aa",
+  vy: 0.018 + (i % 6) * 0.009,
+}));
 
 interface ScreenProps {
   children: React.ReactNode;
@@ -133,17 +140,27 @@ export const Scene5Estilo: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
+  // Escena ahora dura 240 frames (8s)
   const fadeIn = interpolate(frame, [0, 12], [0, 1], { extrapolateRight: "clamp" });
-  const fadeOut = interpolate(frame, [350, 360], [1, 0], { extrapolateLeft: "clamp" });
+  const fadeOut = interpolate(frame, [228, 240], [1, 0], { extrapolateLeft: "clamp" });
   const op = fadeIn * fadeOut;
 
-  const titleOp = interpolate(frame, [14, 36], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  const subtitleOp = interpolate(frame, [120, 150], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  const subtitleY = interpolate(frame, [120, 150], [14, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const titleOp = interpolate(frame, [12, 32], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const subtitleOp = interpolate(frame, [100, 126], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const subtitleY = interpolate(frame, [100, 126], [14, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
 
   return (
     <AbsoluteFill style={{ background: C.bg, opacity: op }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&display=swap');`}</style>
+
+      {/* Partículas de fondo */}
+      <div style={{ position: "absolute", inset: 0, overflow: "hidden" }}>
+        {BG_PARTICLES.map((p, i) => {
+          const py = ((p.y - frame * p.vy * 1.6 + 400) % 110) - 5;
+          const px = p.x + Math.sin(frame * 0.016 + i * 1.2) * 2;
+          return <div key={i} style={{ position: "absolute", left: `${px}%`, top: `${py}%`, width: p.size, height: p.size, borderRadius: "50%", background: p.color, opacity: 0.16 }} />;
+        })}
+      </div>
 
       <div style={{ position: "absolute", inset: 0, backgroundImage: `linear-gradient(${C.border} 1px, transparent 1px), linear-gradient(90deg, ${C.border} 1px, transparent 1px)`, backgroundSize: "100px 100px", opacity: 0.15 }} />
 

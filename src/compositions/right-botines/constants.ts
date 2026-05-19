@@ -16,8 +16,8 @@ export const DURATIONS = {
   problema: 240,  // 8s
   home: 450,      // 15s
   carrito: 360,   // 12s
-  estilo: 360,    // 12s
+  estilo: 240,    // 8s (reducido)
   resultado: 240, // 8s
   cierre: 240,    // 8s
-  total: 2040,    // 68s
+  total: 1920,    // 64s
 } as const;

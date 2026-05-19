@@ -2,8 +2,8 @@ import React from "react";
 import { AbsoluteFill, Easing, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
 import { C, FONT } from "./constants";
 
-// Check marks appear earlier
-const CHECK_TIMES = [55, 130, 220, 315];
+// Checks más rápidos y scroll más veloz
+const CHECK_TIMES = [38, 80, 140, 205];
 
 const SECTION_LABELS = [
   { icon: "🚚", label: "Ticker de envíos" },
@@ -12,32 +12,25 @@ const SECTION_LABELS = [
   { icon: "⭐", label: "Carrusel de Jugadores" },
 ];
 
-// Smooth scroll helper with easing between segments
-// Content layout (cumulative y positions):
-//   Nav:      0  – 52px
-//   Ticker:  52  – 88px
-//   HotSale: 88  – 354px  (266px section)
-//   Products:354 – 730px  (376px section, 9 products)
-//   Players: 730 – 891px  (161px section)
-//   Total: ~891px   Viewport: 676px   MaxScroll: -215px
+// Scroll con easing — transiciones más cortas y ágiles
 const getScrollY = (f: number): number => {
-  if (f < 60) return 0;
-  if (f < 105)
-    return interpolate(f, [60, 105], [0, -75], {
+  if (f < 42) return 0;
+  if (f < 68)
+    return interpolate(f, [42, 68], [0, -75], {
       easing: Easing.inOut(Easing.ease),
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
     });
-  if (f < 140) return -75;
-  if (f < 180)
-    return interpolate(f, [140, 180], [-75, -170], {
+  if (f < 90) return -75;
+  if (f < 118)
+    return interpolate(f, [90, 118], [-75, -170], {
       easing: Easing.inOut(Easing.ease),
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
     });
-  if (f < 240) return -170;
-  if (f < 272)
-    return interpolate(f, [240, 272], [-170, -215], {
+  if (f < 148) return -170;
+  if (f < 174)
+    return interpolate(f, [148, 174], [-170, -215], {
       easing: Easing.inOut(Easing.ease),
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
@@ -130,9 +123,9 @@ const PhoneContent: React.FC<{ scrollY: number }> = ({ scrollY }) => (
       <div style={{ color: C.white, fontSize: 15, fontFamily: FONT, fontWeight: 800, marginBottom: 10 }}>Usados por los Mejores ⭐</div>
       <div style={{ display: "flex", gap: 8 }}>
         {[
-          { name: "Mateo del Blanco", team: "Racing Club" },
-          { name: "Matías Aguirre", team: "Boca Juniors" },
-          { name: "Corbalán", team: "San Lorenzo" },
+          { name: "Mateo del Blanco", team: "Unión de Santa Fe" },
+          { name: "Matías Aguirre", team: "Unión de Santa Fe" },
+          { name: "Corvalán", team: "Unión de Santa Fe" },
         ].map(({ name, team }, i) => (
           <div key={i} style={{ background: C.panel, borderRadius: 10, border: `1px solid ${C.border}`, padding: "12px 10px", flex: 1, textAlign: "center" }}>
             <div style={{ width: 40, height: 40, borderRadius: "50%", background: `linear-gradient(135deg, ${C.cyan}40, ${C.orange}40)`, margin: "0 auto 6px", border: `2px solid ${C.cyan}50`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>⚽</div>
