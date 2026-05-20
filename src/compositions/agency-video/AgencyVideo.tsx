@@ -123,6 +123,37 @@ export const calculateMetadata: CalculateMetadataFunction<any> = ({ props }: { p
 
 const NOVA_TEMPLATES = new Set(['prospecto', 'trayecto'])
 
+// ── Estilos de animación de texto ─────────────────────────────────────────────
+type AnimStyle = 'rise' | 'focus' | 'pop'
+
+// Elige un estilo de forma determinística según clientName+template
+// Así el mismo video siempre tiene el mismo estilo, pero varía entre clientes
+function getAnimStyle(clientName: string, template: string): AnimStyle {
+  const seed = Array.from(clientName + template).reduce((a, c) => a + c.charCodeAt(0), 0)
+  return (['rise', 'focus', 'pop'] as AnimStyle[])[seed % 3]
+}
+
+const ANIM_CONFIGS: Record<AnimStyle, { damping: number; stiffness: number }> = {
+  rise:  { damping: 26, stiffness: 95 },   // sube suavemente desde abajo
+  focus: { damping: 22, stiffness: 90 },   // escala + blur
+  pop:   { damping: 14, stiffness: 240 },  // pop rápido sin rebote
+}
+
+function wordTransform(style: AnimStyle, spr: number, sc: number): React.CSSProperties {
+  switch (style) {
+    case 'rise':
+      return { transform: `translateY(${interpolate(spr, [0, 1], [14 * sc, 0])}px)` }
+    case 'focus':
+      return {
+        transform:  `scale(${interpolate(spr, [0, 1], [0.86, 1])})`,
+        filter:     `blur(${interpolate(spr, [0, 1], [6, 0])}px)`,
+        transformOrigin: 'left center',
+      }
+    case 'pop':
+      return { transform: `scale(${interpolate(spr, [0, 1], [0.4, 1])})`, transformOrigin: 'left center' }
+  }
+}
+
 // ── Title token parser — maneja *palabra* y **palabra** ─────────────────────
 function parseTitleTokens(title: string): Array<{ text: string; accent: boolean }> {
   // Normalizar doble asterisco a simple
@@ -295,7 +326,8 @@ const SlideScene: React.FC<{
   clientName: string
   clientImageUrl?: string | null
   framesPerSlide: number
-}> = ({ slide, isFirst, isLast, brandColors, slideIndex, totalSlides, template, clientName, clientImageUrl, framesPerSlide }) => {
+  animStyle: AnimStyle  // mismo estilo en todos los slides del video
+}> = ({ slide, isFirst, isLast, brandColors, slideIndex, totalSlides, template, clientName, clientImageUrl, framesPerSlide, animStyle }) => {
   const c1    = brandColors[0] ?? '#ff8c42'
   const c2    = brandColors[1] ?? '#6366f1'
   const frame = useCurrentFrame()
@@ -399,13 +431,22 @@ const SlideScene: React.FC<{
           </div>
         )}
 
-        {/* Title tokens — asteriscos detectados correctamente */}
+        {/* Title tokens — estilo de animación consistente en todo el video */}
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', justifyContent: isLandscape ? 'center' : 'flex-start', gap: `${Math.round(5 * sc)}px ${Math.round(12 * sc)}px` }}>
           {tokens.map((token, i) => {
-            const delay = textStartFrame + i * wordDelay
-            const spr   = spring({ frame: frame - delay, fps, config: { damping: 22, stiffness: 80 } })
+            const delay  = textStartFrame + i * wordDelay
+            const spr    = spring({ frame: frame - delay, fps, config: ANIM_CONFIGS[animStyle] })
+            const opFrom = animStyle === 'pop' ? 4 : 10
             return (
-              <span key={i} style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize, fontWeight: 800, color: token.accent ? c1 : '#eef4ff', lineHeight: 1.05, letterSpacing: -2, transform: `translateY(${interpolate(spr, [0, 1], [50 * sc, 0])}px)`, opacity: interpolate(frame - delay, [0, 14], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }), textShadow: token.accent ? `0 0 80px rgba(${hexToRgb(c1)},0.6), 0 2px 24px rgba(0,0,0,0.8)` : '0 2px 32px rgba(0,0,0,0.55)' }}>
+              <span key={i} style={{
+                fontFamily: "'Space Grotesk', sans-serif",
+                fontSize, fontWeight: 800,
+                color: token.accent ? c1 : '#eef4ff',
+                lineHeight: 1.05, letterSpacing: -2,
+                ...wordTransform(animStyle, spr, sc),
+                opacity: interpolate(frame - delay, [0, opFrom], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
+                textShadow: token.accent ? `0 0 80px rgba(${hexToRgb(c1)},0.6), 0 2px 24px rgba(0,0,0,0.8)` : '0 2px 32px rgba(0,0,0,0.55)',
+              }}>
                 {token.text}
               </span>
             )
@@ -449,6 +490,7 @@ export const AgencyVideo: React.FC<AgencyVideoProps> = ({
   clientName, template, slides, brandColors, format: _format = 'vertical', clientImageUrl, framesPerSlide, totalDurationSeconds,
 }) => {
   const colors    = brandColors?.length ? brandColors : ['#ff8c42', '#6366f1']
+  const animStyle = getAnimStyle(clientName, template)
   const durations = getSlideDurations(slides, totalDurationSeconds ?? (framesPerSlide ? undefined : undefined))
 
   // Fallback legacy: si no hay totalDurationSeconds pero hay framesPerSlide, úsalo uniformemente
@@ -480,6 +522,7 @@ export const AgencyVideo: React.FC<AgencyVideoProps> = ({
             clientName={clientName}
             clientImageUrl={clientImageUrl}
             framesPerSlide={finalDurations[i]}
+            animStyle={animStyle}
           />
         </Sequence>
       ))}

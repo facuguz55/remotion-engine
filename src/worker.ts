@@ -75,7 +75,7 @@ REGLAS CRÍTICAS:
 - SIEMPRE escribí con palabras concretas y específicas del negocio del cliente
 - Agrupá temas relacionados en el mismo slide — si dos ideas se conectan (ej: carrito + compras), van juntas
 - Podés agregar contexto creativo relevante para enriquecer los slides, siempre dentro del rubro del cliente
-- PRIORIDAD: usá graphic en la mayoría de slides. Solo el primero y el último van sin graphic. Los slides del medio DEBEN tener graphic (stats, bars o list) salvo que sea imposible
+- PRIORIDAD GRÁFICOS: de los slides del medio, AL MENOS el 80% debe tener graphic. Si hay números → stats. Si hay comparación → bars. Si hay lista de items/pasos/features → list. Solo usá texto puro cuando no haya nada que mostrar visualmente.
 - Primer slide: hook que genere curiosidad o duela al lector, sin graphic, sin badge de agencia
 - Último slide: CTA específico para el cliente (no genérico), sin graphic
 - Español rioplatense (vos, no tú), tono directo y natural
@@ -85,10 +85,23 @@ REGLAS CRÍTICAS:
 - NUNCA uses saltos de línea reales dentro de strings JSON. Si necesitás salto, usá el espacio normal.
 - Todos los strings deben estar en una sola línea, sin caracteres de control.
 ${technicality === 'sin' ? `
-LENGUAJE SIMPLE — SIN TECNICISMO: Hablá como si le explicaras a alguien que no conoce el marketing ni la tecnología web.
-PROHIBIDO usar estas palabras aunque el usuario las mencione: CTR, funnel, KPI, ROI, engagement, algoritmo, copy, tráfico, lead, landing page, CTA, pauta, orgánico, pixel, retargeting, A/B test, split test, banner, pop up, popup, checkout, hot sale, widget, plugin, conversión, impresiones, clics, bounce rate, scroll.
-Reemplazalos así: "cuánta gente te compra" (conversión), "lo que aparece cuando entran a la web" (pop up / banner), "personas que llegan a tu sitio" (tráfico), "qué tan bien funciona el anuncio" (CTR/ROI), "la gente que ve tus publicaciones" (engagement/alcance), "oferta especial" (hot sale).
-Si el usuario menciona uno de estos términos en sus instrucciones, igual explicalo en palabras simples en el slide.` : ''}`
+LENGUAJE SIMPLE — SIN TECNICISMO: Escribí como si le explicaras a alguien que no sabe nada de marketing ni de tecnología web.
+PALABRAS PROHIBIDAS (no uses ninguna, aunque el usuario las mencione):
+- Marketing: CTR, funnel, KPI, ROI, engagement, algoritmo, copy, tráfico, lead, landing page, CTA, pauta, orgánico, pixel, retargeting, A/B test, split test, impresiones, clics, bounce rate, conversión, remarketing, segmentación
+- Web/tecnología: home, header, footer, navbar, navegación principal, banner, pop up, popup, toast, widget, plugin, checkout, carrito de compras, scroll, UI, UX, responsive, viewport, snippet, embed
+- Ventas: hot sale, liquidación técnica, pipeline, upsell, cross-sell, onboarding
+
+CÓMO REEMPLAZARLOS:
+- home / página principal → "tu sitio web" o "cuando entran a tu página"
+- pop up / toast / banner → "el aviso que aparece", "el mensaje que sale"
+- checkout → "cuando van a pagar"
+- hot sale → "oferta especial", "descuento"
+- engagement / alcance → "la gente que ve tus posts", "cuántos interactúan"
+- tráfico → "las personas que entran a tu sitio"
+- conversión → "cuántos terminan comprando"
+- CTR / ROI → "qué tan bien funciona el anuncio", "lo que ganás vs lo que gastás"
+- carrito → "los productos que eligen antes de pagar"
+Si el usuario usó un término técnico en sus instrucciones, reemplazalo por la versión simple en el slide.` : ''}`
 
   const userMessage = isSesion
     ? `Cliente: ${client.name}
