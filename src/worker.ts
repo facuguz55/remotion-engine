@@ -31,32 +31,37 @@ async function generateSlides(job: Record<string, unknown>, client: Record<strin
     ? `INSTRUCCIONES DE EDICIÓN: ${extraInfo}. Tomá como base estos slides anteriores y modificalos: ${JSON.stringify((job.props as Record<string, unknown>)?.previous_slides)}`
     : extraInfo
 
-  const systemPrompt = `Sos un experto en marketing digital. Generás scripts de videos cortos y poderosos para redes sociales (4-6 slides).
+  const systemPrompt = `Sos un experto en marketing digital y copywriting. Generás scripts de videos cortos para redes sociales.
 
 Cada slide tiene estos campos:
-- title: texto impactante (máx 8 palabras). Usá *asteriscos* para resaltar 1-2 palabras clave con el color de la marca.
-- body: texto secundario opcional (máx 18 palabras, dato o explicación concisa)
-- highlight: badge corto opcional (ej: "3X ROI", "RESULTADOS", "@novaagency")
-- graphic: objeto opcional con métricas o features animadas para slides de contenido (NO en el primero ni el último)
-  - type: "stats" (tarjetas de métricas con números), "bars" (barras comparativas), "list" (lista de features)
-  - items: array de { label: string, value: string, icon?: emoji }
-  - Para "stats": máximo 3 items con valores concretos (ej: "+150%", "×3", "2.400")
-  - Para "list": máximo 4 items (ej: { label: "Contenido diario", icon: "✅" })
+- title: texto impactante (máx 8 palabras). Usá *asteriscos* para resaltar 1-2 palabras clave importantes.
+- body: texto secundario opcional (máx 20 palabras, dato concreto o explicación clara)
+- highlight: badge corto opcional (3-4 palabras máx, ej: "3X más ventas", "Resultados reales", "¿Lo hacemos?")
+- graphic: objeto opcional para slides de datos/features (NO en el primero ni el último)
+  - type: "stats" | "bars" | "list"
+  - items: array de { label: string, value?: string, icon?: emoji }
+  - "stats": máx 3 métricas concretas (ej: "+150%", "×3", "2.400")
+  - "list": máx 4 items de features o pasos
 
-Reglas:
-- Primer slide: hook poderoso que engancha en 2 segundos (sin graphic)
-- Último slide: CTA claro — "¿Arrancamos?", "Escribinos hoy", etc. (sin graphic)
-- Slides del medio: usá graphic cuando tenés datos concretos o features para mostrar
-- Español rioplatense (vos, no tú)
-- Máx 6 slides, mín 4
+REGLAS CRÍTICAS:
+- NUNCA uses palabras genéricas como: "implementado", "logrado", "resultado", "conversión", "potencial", "sinergias", "estrategia integral"
+- SIEMPRE escribí con palabras concretas y específicas del negocio del cliente
+- Primer slide: hook que genere curiosidad o duela al lector, sin graphic, sin badge de agencia
+- Último slide: CTA específico para el cliente (no genérico), sin graphic
+- Slides del medio: variá entre texto puro y slides con graphic
+- Español rioplatense (vos, no tú), tono directo y natural
+- Mín 4, máx 6 slides
+- El video es PARA el cliente o SOBRE el cliente — no promoción de Nova Agency (salvo que el template lo pida)
 - Respondé SOLO con JSON válido, sin markdown: { "slides": [...] }`
 
-  const userMessage = `Agencia: Nova Agency
-Cliente: ${client.name}
-Descripción del cliente: ${client.description || client.business_type || 'No especificada'}
-${project ? `Proyecto: ${(project as Record<string, unknown>).name} (${(project as Record<string, unknown>).status}) — ${(project as Record<string, unknown>).description || ''}` : ''}
+  const userMessage = `Cliente: ${client.name}
+Industria/rubro: ${(client as Record<string, unknown>).industry || (client as Record<string, unknown>).business_type || 'No especificado'}
+Descripción: ${(client as Record<string, unknown>).description || (client as Record<string, unknown>).notes || 'No especificada'}
+${project ? `Proyecto vinculado: "${(project as Record<string, unknown>).name}" — estado: ${(project as Record<string, unknown>).status}${(project as Record<string, unknown>).description ? ` — ${(project as Record<string, unknown>).description}` : ''}` : ''}
 Tipo de video: ${job.template} — ${TEMPLATE_PROMPTS[job.template as string] || ''}
-${instructions ? `Info extra / instrucciones: ${instructions}` : ''}`
+${instructions ? `Instrucciones específicas: ${instructions}` : ''}
+
+IMPORTANTE: Este video es para/sobre ${client.name}. Usá su nombre, su rubro y su contexto real. No uses frases genéricas de agencia.`
 
   const response = await anthropic.messages.create({
     model:      'claude-haiku-4-5-20251001',
@@ -108,6 +113,8 @@ async function processJob(job: Record<string, unknown>) {
       : []
     const brandColors = jobBrandColors?.length ? jobBrandColors : clientColors.length ? clientColors : ['#ff8c42', '#6366f1']
 
+    const framesPerSlide = ((job.props as Record<string, unknown>)?.frames_per_slide as number) || 180
+
     const inputProps = {
       clientName: client.name,
       template: job.template,
@@ -115,6 +122,7 @@ async function processJob(job: Record<string, unknown>) {
       brandColors,
       format: ((job.props as Record<string, unknown>)?.format as string) || 'vertical',
       clientImageUrl: (client.photo_url as string) || null,
+      framesPerSlide,
     }
 
     await supabase.from('video_jobs').update({

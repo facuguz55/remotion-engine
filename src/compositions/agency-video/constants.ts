@@ -1,5 +1,5 @@
-export const FRAMES_PER_SLIDE = 90 // 3s at 30fps
-export const TRANSITION_FRAMES = 12
+export const FRAMES_PER_SLIDE = 180 // 6s at 30fps (default — overrideable via props)
+export const TRANSITION_FRAMES = 18
 
 export const DEFAULT_BRAND_COLOR_1 = '#ff8c42'
 export const DEFAULT_BRAND_COLOR_2 = '#f97316'

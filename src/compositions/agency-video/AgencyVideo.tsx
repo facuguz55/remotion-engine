@@ -1,17 +1,15 @@
 import React from 'react'
 import {
   AbsoluteFill,
-  Audio,
   type CalculateMetadataFunction,
   Img,
   Sequence,
   interpolate,
   spring,
-  staticFile,
   useCurrentFrame,
   useVideoConfig,
 } from 'remotion'
-import { FRAMES_PER_SLIDE, TRANSITION_FRAMES, GOOGLE_FONTS, FORMAT_DIMENSIONS, type VideoFormat } from './constants'
+import { FRAMES_PER_SLIDE as DEFAULT_FPS, TRANSITION_FRAMES, GOOGLE_FONTS, FORMAT_DIMENSIONS, type VideoFormat } from './constants'
 
 export interface SlideGraphicItem {
   label: string
@@ -38,6 +36,7 @@ export interface AgencyVideoProps {
   brandColors: string[]
   format?: VideoFormat
   clientImageUrl?: string | null
+  framesPerSlide?: number  // optional override: 120=4s, 150=5s, 180=6s(default), 210=7s
 }
 
 export const DEFAULT_AGENCY_PROPS: AgencyVideoProps = {
@@ -45,6 +44,7 @@ export const DEFAULT_AGENCY_PROPS: AgencyVideoProps = {
   template: 'resultados',
   brandColors: ['#ff8c42', '#6366f1'],
   format: 'vertical',
+  framesPerSlide: 180,
   slides: [
     { title: '*Resultados reales* en 90 días', body: 'Lo que logramos juntos — con datos concretos', highlight: 'NOVA AGENCY' },
     {
@@ -61,17 +61,20 @@ export const DEFAULT_AGENCY_PROPS: AgencyVideoProps = {
   ],
 }
 
-export const calculateMetadata: CalculateMetadataFunction<AgencyVideoProps> = ({ props }) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const calculateMetadata: CalculateMetadataFunction<any> = ({ props }: { props: AgencyVideoProps }) => {
   const dims = FORMAT_DIMENSIONS[props.format ?? 'vertical']
+  const fps  = props.framesPerSlide ?? DEFAULT_FPS
   return {
-    durationInFrames: props.slides.length * FRAMES_PER_SLIDE,
+    durationInFrames: props.slides.length * fps,
     fps: 30,
     width: dims.width,
     height: dims.height,
   }
 }
 
-const POP_VOL = 0.25 // -12 dB
+// Templates que son "de Nova" (muestran badge NOVA AGENCY)
+const NOVA_TEMPLATES = new Set(['prospecto', 'trayecto'])
 
 // ── Animated number counter ─────────────────────────────────────────────────
 function parseValueParts(raw: string): { prefix: string; num: number | null; suffix: string; formatted: string } {
@@ -251,8 +254,10 @@ const SlideScene: React.FC<{
   brandColors: string[]
   slideIndex: number
   totalSlides: number
+  template: string
   clientImageUrl?: string | null
-}> = ({ slide, isFirst, isLast, brandColors, slideIndex, totalSlides, clientImageUrl }) => {
+  framesPerSlide: number
+}> = ({ slide, isFirst, isLast, brandColors, slideIndex, totalSlides, template, clientImageUrl, framesPerSlide }) => {
   const brandColor1 = brandColors[0] ?? '#ff8c42'
   const brandColor2 = brandColors[1 % brandColors.length] ?? '#6366f1'
   const frame = useCurrentFrame()
@@ -260,55 +265,42 @@ const SlideScene: React.FC<{
 
   const sc = Math.min(width, height) / 1080
   const isLandscape = width > height
+  const showNovaBadge = NOVA_TEMPLATES.has(template)
 
   const fadeIn  = interpolate(frame, [0, TRANSITION_FRAMES], [0, 1], { extrapolateRight: 'clamp' })
-  const fadeOut = interpolate(frame, [FRAMES_PER_SLIDE - TRANSITION_FRAMES, FRAMES_PER_SLIDE], [1, 0], { extrapolateLeft: 'clamp' })
+  const fadeOut = interpolate(frame, [framesPerSlide - TRANSITION_FRAMES, framesPerSlide], [1, 0], { extrapolateLeft: 'clamp' })
 
   const words = slide.title.split(' ')
-  const textStartFrame = isFirst || isLast ? 22 : 14
+  // Timing más espaciado para dar tiempo a leer
+  const textStartFrame = 20
+  const wordDelay      = 11  // más lento entre palabras
   const highlightFrame = 8
-  const bodyFrame = textStartFrame + words.length * 9
-  const graphicFrame = bodyFrame + (slide.body ? 20 : 8)
-  const ctaFrame = graphicFrame + (slide.graphic ? (slide.graphic.items.length * 10) : 0)
+  const bodyFrame      = textStartFrame + words.length * wordDelay + 8
+  const graphicFrame   = bodyFrame + (slide.body ? 28 : 10)
+  const ctaFrame       = graphicFrame + (slide.graphic ? (slide.graphic.items.length * 12) : 0)
 
   const baseFontSize = words.length <= 3 ? 114 : words.length <= 5 ? 96 : words.length <= 7 ? 82 : 68
   const fontSize    = Math.round(baseFontSize * sc)
-  const bodySize    = Math.round(36 * sc)
+  const bodySize    = Math.round(38 * sc)
   const badgeSize   = Math.round(26 * sc)
   const padH        = Math.round(72 * sc)
   const padBottom   = Math.round((isLandscape ? 60 : 150) * sc)
   const dotsBottom  = Math.round(80 * sc)
-  const gap         = Math.round(24 * sc)
+  const gap         = Math.round(28 * sc)
+
+  // Fondo dinámico por posición del slide
+  const bgPositions = ['50% 30%', '20% 60%', '80% 40%', '50% 70%', '30% 35%']
+  const bg2Positions = ['70% 70%', '80% 30%', '20% 70%', '70% 30%', '80% 60%']
+  const bgPos  = bgPositions[slideIndex % bgPositions.length]
+  const bgPos2 = bg2Positions[slideIndex % bg2Positions.length]
 
   return (
     <AbsoluteFill style={{ opacity: fadeIn * fadeOut }}>
 
-      {/* ── Pop sounds ── */}
-      {(isFirst || isLast) && (
-        <Sequence from={6} durationInFrames={8}><Audio src={staticFile('sounds/pop.mp3')} volume={POP_VOL} /></Sequence>
-      )}
-      {slide.highlight && !isFirst && !isLast && (
-        <Sequence from={highlightFrame} durationInFrames={8}><Audio src={staticFile('sounds/pop.mp3')} volume={POP_VOL} /></Sequence>
-      )}
-      {words.map((_, i) => (
-        <Sequence key={`pop-w-${i}`} from={textStartFrame + i * 9} durationInFrames={8}>
-          <Audio src={staticFile('sounds/pop.mp3')} volume={POP_VOL} />
-        </Sequence>
-      ))}
-      {slide.body && (
-        <Sequence from={bodyFrame} durationInFrames={8}><Audio src={staticFile('sounds/pop.mp3')} volume={POP_VOL} /></Sequence>
-      )}
-      {slide.graphic && (
-        <Sequence from={graphicFrame} durationInFrames={8}><Audio src={staticFile('sounds/pop.mp3')} volume={POP_VOL} /></Sequence>
-      )}
-      {isLast && slide.highlight && (
-        <Sequence from={ctaFrame} durationInFrames={8}><Audio src={staticFile('sounds/pop.mp3')} volume={POP_VOL} /></Sequence>
-      )}
-
-      {/* ── Backgrounds ── */}
+      {/* ── Fondos siempre visibles en todos los slides ── */}
       <div style={{ position: 'absolute', inset: 0, background: '#050c14' }} />
 
-      {/* Client image as subtle background */}
+      {/* Imagen del cliente como fondo desenfocado (si existe) */}
       {clientImageUrl && (
         <Img
           src={clientImageUrl}
@@ -316,37 +308,50 @@ const SlideScene: React.FC<{
             position: 'absolute', inset: 0,
             width: '100%', height: '100%',
             objectFit: 'cover',
-            opacity: isFirst || isLast ? 0.1 : 0.06,
-            filter: 'blur(18px) saturate(1.8)',
+            opacity: 0.08,
+            filter: 'blur(22px) saturate(1.6)',
           }}
         />
       )}
 
+      {/* Gradiente radial primario — siempre visible */}
       <div style={{
         position: 'absolute', inset: 0,
-        background: isFirst || isLast
-          ? `radial-gradient(ellipse at 50% 35%, ${brandColor1}28 0%, #050c14 60%)`
-          : 'linear-gradient(180deg, #050c14cc 0%, #050c14aa 50%, #050c14cc 100%)',
+        background: `radial-gradient(ellipse at ${bgPos}, ${brandColor1}30 0%, transparent 58%)`,
       }} />
+      {/* Gradiente secundario con color 2 */}
       <div style={{
         position: 'absolute', inset: 0,
-        backgroundImage: 'linear-gradient(rgba(255,255,255,0.014) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.014) 1px, transparent 1px)',
+        background: `radial-gradient(ellipse at ${bgPos2}, ${brandColor2}18 0%, transparent 50%)`,
+      }} />
+      {/* Grid de líneas finas */}
+      <div style={{
+        position: 'absolute', inset: 0,
+        backgroundImage: 'linear-gradient(rgba(255,255,255,0.016) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.016) 1px, transparent 1px)',
         backgroundSize: `${Math.round(72 * sc)}px ${Math.round(72 * sc)}px`,
       }} />
-      <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at center, transparent 40%, rgba(5,12,20,0.75) 100%)' }} />
+      {/* Viñeta */}
+      <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at center, transparent 38%, rgba(5,12,20,0.82) 100%)' }} />
 
-      {/* ── Accent glow line (top) ── */}
+      {/* ── Línea de acento superior ── */}
       <div style={{
-        position: 'absolute', top: 0, left: '10%', right: '10%', height: Math.round(2 * sc),
-        background: `linear-gradient(90deg, transparent, ${brandColor1}60, ${brandColor2}60, transparent)`,
-        opacity: interpolate(frame, [4, 16], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
+        position: 'absolute', top: 0, left: '8%', right: '8%', height: Math.round(2 * sc),
+        background: `linear-gradient(90deg, transparent, ${brandColor1}70, ${brandColor2}50, transparent)`,
+        opacity: interpolate(frame, [4, 20], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
       }} />
 
-      {/* ── Progress dots ── */}
+      {/* ── Línea de acento inferior ── */}
+      <div style={{
+        position: 'absolute', bottom: 0, left: '20%', right: '20%', height: Math.round(1 * sc),
+        background: `linear-gradient(90deg, transparent, ${brandColor1}30, transparent)`,
+        opacity: interpolate(frame, [10, 24], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
+      }} />
+
+      {/* ── Puntos de progreso ── */}
       <div style={{
         position: 'absolute', bottom: dotsBottom, left: 0, right: 0,
         display: 'flex', justifyContent: 'center', gap: Math.round(10 * sc),
-        opacity: interpolate(frame, [14, 28], [0, 0.6], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
+        opacity: interpolate(frame, [14, 28], [0, 0.65], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
       }}>
         {Array.from({ length: totalSlides }).map((_, i) => (
           <div key={i} style={{
@@ -354,12 +359,11 @@ const SlideScene: React.FC<{
             height: Math.round(8 * sc),
             borderRadius: 4,
             background: i === slideIndex ? brandColor1 : '#1e3a5f',
-            transition: 'width 0.3s',
           }} />
         ))}
       </div>
 
-      {/* ── Content ── */}
+      {/* ── Contenido ── */}
       <div style={{
         position: 'absolute', inset: 0,
         display: 'flex', flexDirection: 'column',
@@ -371,13 +375,13 @@ const SlideScene: React.FC<{
         gap,
       }}>
 
-        {/* Nova badge */}
-        {(isFirst || isLast) && (
+        {/* Badge NOVA AGENCY — solo en templates de Nova */}
+        {showNovaBadge && (isFirst || isLast) && (
           <div style={{
             background: `${brandColor1}18`, border: `1px solid ${brandColor1}40`, borderRadius: 999,
             padding: `${Math.round(9 * sc)}px ${Math.round(28 * sc)}px`,
-            opacity: interpolate(frame, [6, 20], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
-            transform: `translateY(${interpolate(frame, [6, 20], [14, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })}px)`,
+            opacity: interpolate(frame, [6, 22], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
+            transform: `translateY(${interpolate(frame, [6, 22], [18, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })}px)`,
           }}>
             <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: badgeSize, color: brandColor1, fontWeight: 700, letterSpacing: 3 }}>
               NOVA AGENCY
@@ -385,13 +389,13 @@ const SlideScene: React.FC<{
           </div>
         )}
 
-        {/* Highlight pill */}
+        {/* Highlight pill — slides del medio */}
         {slide.highlight && !isFirst && !isLast && (
           <div style={{
-            background: `${brandColor1}12`, border: `1px solid ${brandColor1}28`, borderRadius: Math.round(10 * sc),
+            background: `${brandColor1}12`, border: `1px solid ${brandColor1}30`, borderRadius: Math.round(10 * sc),
             padding: `${Math.round(7 * sc)}px ${Math.round(20 * sc)}px`,
-            opacity: interpolate(frame, [highlightFrame, highlightFrame + 12], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
-            transform: `translateY(${interpolate(frame, [highlightFrame, highlightFrame + 12], [12, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })}px)`,
+            opacity: interpolate(frame, [highlightFrame, highlightFrame + 16], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
+            transform: `translateY(${interpolate(frame, [highlightFrame, highlightFrame + 16], [16, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })}px)`,
           }}>
             <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: badgeSize, color: brandColor1, fontWeight: 700 }}>
               {slide.highlight}
@@ -399,13 +403,13 @@ const SlideScene: React.FC<{
           </div>
         )}
 
-        {/* Title words */}
+        {/* Título — palabras con animación suave (sin pop) */}
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', justifyContent: isLandscape ? 'center' : 'flex-start', gap: `${Math.round(8 * sc)}px ${Math.round(14 * sc)}px` }}>
           {words.map((word, i) => {
             const isAccent = word.startsWith('*') && word.endsWith('*')
             const displayWord = isAccent ? word.slice(1, -1) : word
-            const delay = textStartFrame + i * 9
-            const spr = spring({ frame: frame - delay, fps, config: { damping: 16, stiffness: 105 } })
+            const delay = textStartFrame + i * wordDelay
+            const spr = spring({ frame: frame - delay, fps, config: { damping: 18, stiffness: 90 } })
             return (
               <span key={i} style={{
                 fontFamily: "'Space Grotesk', sans-serif",
@@ -414,10 +418,10 @@ const SlideScene: React.FC<{
                 color: isAccent ? brandColor1 : '#f0f6ff',
                 lineHeight: 1.06,
                 letterSpacing: -2,
-                transform: `translateY(${interpolate(spr, [0, 1], [46 * sc, 0])}px) scale(${interpolate(spr, [0, 1], [0.88, 1])})`,
+                transform: `translateY(${interpolate(spr, [0, 1], [52 * sc, 0])}px)`,
                 transformOrigin: isLandscape ? 'center bottom' : 'left bottom',
-                opacity: interpolate(frame - delay, [0, 10], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
-                textShadow: isAccent ? `0 0 60px ${brandColor1}50, 0 2px 20px rgba(0,0,0,0.6)` : '0 2px 30px rgba(0,0,0,0.5)',
+                opacity: interpolate(frame - delay, [0, 14], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
+                textShadow: isAccent ? `0 0 60px ${brandColor1}55, 0 2px 20px rgba(0,0,0,0.7)` : '0 2px 30px rgba(0,0,0,0.5)',
               }}>
                 {displayWord}
               </span>
@@ -428,10 +432,10 @@ const SlideScene: React.FC<{
         {/* Body */}
         {slide.body && (
           <p style={{
-            fontFamily: "'Space Grotesk', sans-serif", fontSize: bodySize, color: '#6a8099',
-            lineHeight: 1.5, maxWidth: Math.round(860 * sc), margin: 0, fontWeight: 400,
-            opacity: interpolate(frame, [bodyFrame, bodyFrame + 16], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
-            transform: `translateY(${interpolate(frame, [bodyFrame, bodyFrame + 16], [16 * sc, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })}px)`,
+            fontFamily: "'Space Grotesk', sans-serif", fontSize: bodySize, color: '#7a9ab8',
+            lineHeight: 1.55, maxWidth: Math.round(880 * sc), margin: 0, fontWeight: 400,
+            opacity: interpolate(frame, [bodyFrame, bodyFrame + 20], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
+            transform: `translateY(${interpolate(frame, [bodyFrame, bodyFrame + 20], [20 * sc, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })}px)`,
           }}>
             {slide.body}
           </p>
@@ -441,7 +445,8 @@ const SlideScene: React.FC<{
         {slide.graphic && (
           <div style={{
             width: '100%',
-            opacity: interpolate(frame, [graphicFrame, graphicFrame + 8], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
+            opacity: interpolate(frame, [graphicFrame, graphicFrame + 12], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
+            transform: `translateY(${interpolate(frame, [graphicFrame, graphicFrame + 12], [24 * sc, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })}px)`,
           }}>
             {slide.graphic.type === 'stats' && (
               <StatsPanel items={slide.graphic.items} brandColors={brandColors} startFrame={graphicFrame} sc={sc} />
@@ -455,15 +460,18 @@ const SlideScene: React.FC<{
           </div>
         )}
 
-        {/* CTA pill (last slide) */}
+        {/* CTA pill — último slide */}
         {isLast && slide.highlight && (
           <div style={{
-            background: `${brandColor1}18`, border: `1px solid ${brandColor1}50`, borderRadius: Math.round(14 * sc),
-            padding: `${Math.round(13 * sc)}px ${Math.round(36 * sc)}px`,
-            opacity: interpolate(frame, [ctaFrame, ctaFrame + 18], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
-            transform: `translateY(${interpolate(frame, [ctaFrame, ctaFrame + 18], [14 * sc, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })}px)`,
+            background: `linear-gradient(135deg, ${brandColor1}20, ${brandColor2}15)`,
+            border: `1px solid ${brandColor1}55`,
+            borderRadius: Math.round(14 * sc),
+            padding: `${Math.round(14 * sc)}px ${Math.round(38 * sc)}px`,
+            opacity: interpolate(frame, [ctaFrame, ctaFrame + 22], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
+            transform: `translateY(${interpolate(frame, [ctaFrame, ctaFrame + 22], [18 * sc, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })}px)`,
+            boxShadow: `0 0 40px ${brandColor1}20`,
           }}>
-            <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: Math.round(34 * sc), color: brandColor1, fontWeight: 700 }}>
+            <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: Math.round(36 * sc), color: brandColor1, fontWeight: 700 }}>
               {slide.highlight}
             </span>
           </div>
@@ -475,23 +483,18 @@ const SlideScene: React.FC<{
 
 // ── Main composition ─────────────────────────────────────────────────────────
 export const AgencyVideo: React.FC<AgencyVideoProps> = ({
-  clientName, template, slides, brandColors, format = 'vertical', clientImageUrl,
+  // clientName and format are used via calculateMetadata / worker — keep in props but unused here
+  clientName: _clientName, template, slides, brandColors, format: _format = 'vertical', clientImageUrl, framesPerSlide,
 }) => {
   const colors = brandColors?.length ? brandColors : ['#ff8c42', '#6366f1']
+  const fps    = framesPerSlide ?? DEFAULT_FPS
   return (
     <AbsoluteFill style={{ background: '#050c14' }}>
       <style>{GOOGLE_FONTS}</style>
 
-      {/* Whoosh on every slide transition */}
-      {slides.map((_, i) => (
-        <Sequence key={`whoosh-${i}`} from={i * FRAMES_PER_SLIDE} durationInFrames={20}>
-          <Audio src={staticFile('sounds/whoosh.mp3')} volume={i === 0 ? 0.38 : 0.52} />
-        </Sequence>
-      ))}
-
       {/* Slides */}
       {slides.map((slide, i) => (
-        <Sequence key={i} from={i * FRAMES_PER_SLIDE} durationInFrames={FRAMES_PER_SLIDE}>
+        <Sequence key={i} from={i * fps} durationInFrames={fps}>
           <SlideScene
             slide={slide}
             isFirst={i === 0}
@@ -499,10 +502,13 @@ export const AgencyVideo: React.FC<AgencyVideoProps> = ({
             brandColors={colors}
             slideIndex={i}
             totalSlides={slides.length}
+            template={template}
             clientImageUrl={clientImageUrl}
+            framesPerSlide={fps}
           />
         </Sequence>
       ))}
     </AbsoluteFill>
   )
 }
+

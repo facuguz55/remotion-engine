@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React from "react";
 import { Composition, registerRoot } from "remotion";
 import { HelloWorld } from "./compositions/HelloWorld";
@@ -50,13 +51,13 @@ const RemotionRoot: React.FC = () => {
       />
       <Composition
         id="AgencyVideo"
-        component={AgencyVideo}
-        durationInFrames={DEFAULT_AGENCY_PROPS.slides.length * 90}
+        component={AgencyVideo as any}
+        durationInFrames={DEFAULT_AGENCY_PROPS.slides.length * (DEFAULT_AGENCY_PROPS.framesPerSlide ?? 180)}
         fps={30}
         width={1080}
         height={1920}
-        defaultProps={DEFAULT_AGENCY_PROPS}
-        calculateMetadata={agencyCalcMetadata}
+        defaultProps={DEFAULT_AGENCY_PROPS as any}
+        calculateMetadata={agencyCalcMetadata as any}
       />
     </>
   );
