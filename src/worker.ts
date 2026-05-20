@@ -23,7 +23,6 @@ const TEMPLATE_PROMPTS: Record<string, string> = {
   onboarding: 'Dale la bienvenida al nuevo cliente. Explicá cómo trabajamos, qué puede esperar y cuáles son los próximos pasos.',
   resultados: 'Mostrá los resultados y métricas concretas obtenidas para el cliente. Números, logros y proyección.',
   servicio:   'Explicá un servicio específico de Nova Agency en detalle. Qué es, cómo funciona y qué beneficios trae.',
-  sesion:     'Resumí lo que se trabajó en la sesión de hoy con el cliente. Tareas completadas, decisiones tomadas y próximos pasos concretos. Tono directo, como un cierre de reunión.',
 }
 
 async function generateSlides(job: Record<string, unknown>, client: Record<string, unknown>, project: Record<string, unknown> | null): Promise<unknown[]> {
@@ -33,7 +32,33 @@ async function generateSlides(job: Record<string, unknown>, client: Record<strin
     ? `INSTRUCCIONES DE EDICIÓN: ${extraInfo}. Tomá como base estos slides anteriores y modificalos: ${JSON.stringify((job.props as Record<string, unknown>)?.previous_slides)}`
     : extraInfo
 
-  const systemPrompt = `Sos un experto en marketing digital y copywriting. Generás scripts de videos cortos para redes sociales.
+  // El template "sesion" tiene un prompt completamente distinto — es un resumen profesional, no un video de redes
+  const isSesion = job.template === 'sesion'
+
+  const systemPrompt = isSesion
+    ? `Sos un asistente de comunicación profesional. Generás resúmenes visuales de reuniones de trabajo para compartir con clientes.
+
+Este resumen se le manda al cliente como actualización — NO es un video de redes sociales. El tono es profesional, claro y directo.
+
+Cada slide tiene estos campos:
+- title: título descriptivo y claro (máx 8 palabras). Podés usar *asteriscos* en 1-2 palabras clave.
+- body: detalle opcional (máx 20 palabras, información concreta)
+- graphic: objeto opcional tipo "list" para listar ítems concretos (máx 4 items)
+  - type: "list", items: array de { label: string, icon?: emoji }
+
+REGLAS CRÍTICAS:
+- Usá SOLAMENTE la información que el usuario te provee en "Instrucciones específicas". NO inventés nada.
+- Si el usuario no da próximos pasos, no los inventes. Usá solo lo que está escrito.
+- UN tema por slide — no mezclés dos cosas distintas en el mismo slide.
+- Primer slide: qué fue la sesión (ej: "Hoy trabajamos en X" o "Sesión con [cliente]: X"). Sin hook de redes sociales.
+- Slides del medio: organizá exactamente lo que se hizo, decisión por decisión, tarea por tarea.
+- Último slide: próximos pasos concretos (solo si el usuario los mencionó). Si no los mencionó, hacé un slide de cierre simple.
+- NUNCA uses: lenguaje de ventas, ganchos, frases exageradas, "¿arrancamos?", "escribinos", "activamos el siguiente nivel", ni nada que suene a publicidad.
+- Español rioplatense (vos, no tú), tono profesional pero cercano.
+- Mín 3, máx 5 slides.
+- Respondé SOLO con JSON válido, sin markdown: { "slides": [...] }
+- NUNCA uses saltos de línea reales dentro de strings JSON.`
+    : `Sos un experto en marketing digital y copywriting. Generás scripts de videos cortos para redes sociales.
 
 Cada slide tiene estos campos:
 - title: texto impactante (máx 8 palabras). Usá *asteriscos* para resaltar 1-2 palabras clave importantes.
@@ -48,6 +73,8 @@ Cada slide tiene estos campos:
 REGLAS CRÍTICAS:
 - NUNCA uses palabras genéricas como: "implementado", "logrado", "resultado", "conversión", "potencial", "sinergias", "estrategia integral"
 - SIEMPRE escribí con palabras concretas y específicas del negocio del cliente
+- Cada slide habla de UNA sola cosa — no mezclés dos temas distintos en el mismo slide
+- NO inventes información que no esté en las instrucciones del usuario
 - Primer slide: hook que genere curiosidad o duela al lector, sin graphic, sin badge de agencia
 - Último slide: CTA específico para el cliente (no genérico), sin graphic
 - Slides del medio: variá entre texto puro y slides con graphic
@@ -57,9 +84,20 @@ REGLAS CRÍTICAS:
 - Respondé SOLO con JSON válido, sin markdown: { "slides": [...] }
 - NUNCA uses saltos de línea reales dentro de strings JSON. Si necesitás salto, usá el espacio normal.
 - Todos los strings deben estar en una sola línea, sin caracteres de control.
-${technicality === 'sin' ? `IMPORTANTE — SIN TECNICISMO: Explicá todo en lenguaje simple y cotidiano. NUNCA uses: CTR, funnel, KPI, conversión, ROI, engagement, algoritmo, copy, tráfico, lead, landing, CTA, pauta, orgánico. Reemplazalos por palabras de todos los días: "cuánta gente te escribe", "cuánta gente compra", "lo que gastás en publicidad vs lo que ganás", "la gente que ve tus posts".` : ''}`
+${technicality === 'sin' ? `
+LENGUAJE SIMPLE — SIN TECNICISMO: Hablá como si le explicaras a alguien que no conoce el marketing ni la tecnología web.
+PROHIBIDO usar estas palabras aunque el usuario las mencione: CTR, funnel, KPI, ROI, engagement, algoritmo, copy, tráfico, lead, landing page, CTA, pauta, orgánico, pixel, retargeting, A/B test, split test, banner, pop up, popup, checkout, hot sale, widget, plugin, conversión, impresiones, clics, bounce rate, scroll.
+Reemplazalos así: "cuánta gente te compra" (conversión), "lo que aparece cuando entran a la web" (pop up / banner), "personas que llegan a tu sitio" (tráfico), "qué tan bien funciona el anuncio" (CTR/ROI), "la gente que ve tus publicaciones" (engagement/alcance), "oferta especial" (hot sale).
+Si el usuario menciona uno de estos términos en sus instrucciones, igual explicalo en palabras simples en el slide.` : ''}`
 
-  const userMessage = `Cliente: ${client.name}
+  const userMessage = isSesion
+    ? `Cliente: ${client.name}
+${project ? `Proyecto: "${(project as Record<string, unknown>).name}"` : ''}
+Contenido de la sesión (organizá esto en slides):
+${instructions || extraInfo || 'No se proporcionó contenido. Creá un slide de cierre genérico.'}
+
+RECORDÁ: usá SOLO lo que está acá arriba. No inventes nada extra.`
+    : `Cliente: ${client.name}
 Industria/rubro: ${(client as Record<string, unknown>).industry || (client as Record<string, unknown>).business_type || 'No especificado'}
 Descripción: ${(client as Record<string, unknown>).description || (client as Record<string, unknown>).notes || 'No especificada'}
 ${project ? `Proyecto vinculado: "${(project as Record<string, unknown>).name}" — estado: ${(project as Record<string, unknown>).status}${(project as Record<string, unknown>).description ? ` — ${(project as Record<string, unknown>).description}` : ''}` : ''}
