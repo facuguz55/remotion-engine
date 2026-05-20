@@ -36,7 +36,7 @@ export interface AgencyVideoProps {
   brandColors: string[]
   format?: VideoFormat
   clientImageUrl?: string | null
-  framesPerSlide?: number  // optional override: 120=4s, 150=5s, 180=6s(default), 210=7s
+  framesPerSlide?: number
 }
 
 export const DEFAULT_AGENCY_PROPS: AgencyVideoProps = {
@@ -73,16 +73,23 @@ export const calculateMetadata: CalculateMetadataFunction<any> = ({ props }: { p
   }
 }
 
-// Templates que son "de Nova" (muestran badge NOVA AGENCY)
 const NOVA_TEMPLATES = new Set(['prospecto', 'trayecto'])
 
-// ── Animated number counter ─────────────────────────────────────────────────
-function parseValueParts(raw: string): { prefix: string; num: number | null; suffix: string; formatted: string } {
+// ── Hex → RGB helper ─────────────────────────────────────────────────────────
+function hexToRgb(hex: string): string {
+  const h = hex.replace('#', '')
+  const r = parseInt(h.substring(0, 2), 16)
+  const g = parseInt(h.substring(2, 4), 16)
+  const b = parseInt(h.substring(4, 6), 16)
+  return `${r},${g},${b}`
+}
+
+// ── Animated counter ─────────────────────────────────────────────────────────
+function parseValueParts(raw: string): { prefix: string; num: number | null; suffix: string } {
   const match = raw.match(/(.*?)([\d.,]+)(.*)/)
-  if (!match) return { prefix: '', num: null, suffix: '', formatted: raw }
-  const numStr = match[2].replace(',', '.')
-  const num = parseFloat(numStr)
-  return { prefix: match[1], num, suffix: match[3], formatted: raw }
+  if (!match) return { prefix: '', num: null, suffix: '' }
+  const num = parseFloat(match[2].replace(',', '.'))
+  return { prefix: match[1], num, suffix: match[3] }
 }
 
 const AnimatedValue: React.FC<{ raw: string; frame: number; delay: number; duration: number; color: string; fontSize: number }> = ({
@@ -95,105 +102,42 @@ const AnimatedValue: React.FC<{ raw: string; frame: number; delay: number; durat
   return <span style={{ color, fontSize, fontWeight: 800 }}>{prefix}{display}{suffix}</span>
 }
 
-// ── Stats panel (metric cards) ───────────────────────────────────────────────
-const StatsPanel: React.FC<{
-  items: SlideGraphicItem[]
-  brandColors: string[]
-  startFrame: number
-  sc: number
-}> = ({ items, brandColors, startFrame, sc }) => {
+// ── Stats panel ───────────────────────────────────────────────────────────────
+const StatsPanel: React.FC<{ items: SlideGraphicItem[]; brandColors: string[]; startFrame: number; sc: number }> = ({ items, brandColors, startFrame, sc }) => {
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()
+  const c1 = brandColors[0] ?? '#ff8c42'
+  const c2 = brandColors[1] ?? '#6366f1'
 
   return (
-    <div style={{ display: 'flex', gap: Math.round(10 * sc), justifyContent: 'center', flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', gap: Math.round(16 * sc), justifyContent: 'center', flexWrap: 'wrap' }}>
       {items.map((item, i) => {
-        const delay = startFrame + i * 7
-        const spr = spring({ frame: frame - delay, fps, config: { damping: 14, stiffness: 130 } })
-        const cardOp = interpolate(spr, [0, 1], [0, 1])
-        const cardSc = interpolate(spr, [0, 1], [0.6, 1])
-        const cardY  = interpolate(spr, [0, 1], [30, 0])
-        const accent = brandColors[i % brandColors.length]
-
-        return (
-          <div key={i} style={{
-            background: `${accent}10`,
-            border: `1px solid ${accent}30`,
-            borderRadius: Math.round(16 * sc),
-            padding: `${Math.round(18 * sc)}px ${Math.round(22 * sc)}px`,
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: Math.round(6 * sc),
-            opacity: cardOp,
-            transform: `scale(${cardSc}) translateY(${cardY}px)`,
-            minWidth: Math.round(130 * sc),
-            boxShadow: `0 0 ${Math.round(30 * sc)}px ${accent}15`,
-          }}>
-            {item.icon && <span style={{ fontSize: Math.round(30 * sc) }}>{item.icon}</span>}
-            {item.value && (
-              <AnimatedValue
-                raw={item.value}
-                frame={frame}
-                delay={delay}
-                duration={20}
-                color={accent}
-                fontSize={Math.round(48 * sc)}
-              />
-            )}
-            <span style={{
-              fontFamily: "'Space Grotesk', sans-serif",
-              fontSize: Math.round(18 * sc),
-              color: '#4a6080',
-              fontWeight: 600,
-              textAlign: 'center',
-              lineHeight: 1.2,
-            }}>
-              {item.label}
-            </span>
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
-// ── List panel (feature checklist) ──────────────────────────────────────────
-const ListPanel: React.FC<{
-  items: SlideGraphicItem[]
-  brandColors: string[]
-  startFrame: number
-  sc: number
-}> = ({ items, brandColors, startFrame, sc }) => {
-  const brandColor1 = brandColors[0] ?? '#ff8c42'
-  const frame = useCurrentFrame()
-  const { fps } = useVideoConfig()
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: Math.round(10 * sc) }}>
-      {items.map((item, i) => {
+        const accent = i === 0 ? c1 : i === 1 ? c2 : c1
         const delay = startFrame + i * 8
-        const spr = spring({ frame: frame - delay, fps, config: { damping: 16, stiffness: 110 } })
-        const op = interpolate(spr, [0, 1], [0, 1])
-        const x  = interpolate(spr, [0, 1], [-30, 0])
+        const spr = spring({ frame: frame - delay, fps, config: { damping: 15, stiffness: 120 } })
+        const op  = interpolate(spr, [0, 1], [0, 1])
+        const sc2 = interpolate(spr, [0, 1], [0.7, 1])
+        const y   = interpolate(spr, [0, 1], [40, 0])
 
         return (
           <div key={i} style={{
-            display: 'flex', alignItems: 'center', gap: Math.round(14 * sc),
+            background: `linear-gradient(145deg, rgba(${hexToRgb(accent)},0.14), rgba(${hexToRgb(accent)},0.04))`,
+            border: `1.5px solid rgba(${hexToRgb(accent)},0.35)`,
+            borderRadius: Math.round(20 * sc),
+            padding: `${Math.round(22 * sc)}px ${Math.round(28 * sc)}px`,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: Math.round(8 * sc),
             opacity: op,
-            transform: `translateX(${x}px)`,
+            transform: `scale(${sc2}) translateY(${y}px)`,
+            minWidth: Math.round(150 * sc),
+            boxShadow: `0 8px 32px rgba(${hexToRgb(accent)},0.15), inset 0 1px 0 rgba(255,255,255,0.06)`,
           }}>
-            <span style={{
-              fontSize: Math.round(28 * sc),
-              width: Math.round(40 * sc),
-              textAlign: 'center',
-              flexShrink: 0,
-            }}>
-              {item.icon || '▸'}
-            </span>
-            <span style={{
-              fontFamily: "'Space Grotesk', sans-serif",
-              fontSize: Math.round(28 * sc),
-              color: '#94a3b8',
-              fontWeight: 500,
-            }}>
+            {/* Top accent bar */}
+            <div style={{ position: 'absolute', top: 0, left: '20%', right: '20%', height: Math.round(2 * sc), background: accent, borderRadius: '0 0 4px 4px', opacity: 0.7 }} />
+            {item.icon && <span style={{ fontSize: Math.round(32 * sc) }}>{item.icon}</span>}
+            {item.value && (
+              <AnimatedValue raw={item.value} frame={frame} delay={delay} duration={22} color={accent} fontSize={Math.round(52 * sc)} />
+            )}
+            <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: Math.round(20 * sc), color: 'rgba(255,255,255,0.5)', fontWeight: 600, textAlign: 'center' }}>
               {item.label}
             </span>
           </div>
@@ -203,40 +147,72 @@ const ListPanel: React.FC<{
   )
 }
 
-// ── Bars panel (comparison bars) ─────────────────────────────────────────────
-const BarsPanel: React.FC<{
-  items: SlideGraphicItem[]
-  brandColors: string[]
-  startFrame: number
-  sc: number
-}> = ({ items, brandColors, startFrame, sc }) => {
+// ── List panel ────────────────────────────────────────────────────────────────
+const ListPanel: React.FC<{ items: SlideGraphicItem[]; brandColors: string[]; startFrame: number; sc: number }> = ({ items, brandColors, startFrame, sc }) => {
+  const c1 = brandColors[0] ?? '#ff8c42'
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()
 
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: Math.round(14 * sc), width: '100%' }}>
+      {items.map((item, i) => {
+        const delay = startFrame + i * 9
+        const spr = spring({ frame: frame - delay, fps, config: { damping: 18, stiffness: 100 } })
+        const op = interpolate(spr, [0, 1], [0, 1])
+        const x  = interpolate(spr, [0, 1], [-40, 0])
+
+        return (
+          <div key={i} style={{
+            display: 'flex', alignItems: 'center', gap: Math.round(16 * sc),
+            opacity: op, transform: `translateX(${x}px)`,
+            background: `rgba(${hexToRgb(c1)},0.06)`,
+            borderRadius: Math.round(12 * sc),
+            padding: `${Math.round(14 * sc)}px ${Math.round(18 * sc)}px`,
+            borderLeft: `${Math.round(3 * sc)}px solid ${c1}`,
+          }}>
+            {item.icon && <span style={{ fontSize: Math.round(30 * sc), flexShrink: 0 }}>{item.icon}</span>}
+            <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: Math.round(30 * sc), color: 'rgba(255,255,255,0.85)', fontWeight: 600 }}>
+              {item.label}
+            </span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ── Bars panel ────────────────────────────────────────────────────────────────
+const BarsPanel: React.FC<{ items: SlideGraphicItem[]; brandColors: string[]; startFrame: number; sc: number }> = ({ items, brandColors, startFrame, sc }) => {
+  const c1 = brandColors[0] ?? '#ff8c42'
+  const c2 = brandColors[1] ?? '#6366f1'
+  const frame = useCurrentFrame()
+  const { fps } = useVideoConfig()
   const maxNum = Math.max(...items.map(it => parseValueParts(it.value ?? '0').num ?? 0), 1)
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: Math.round(16 * sc), width: '100%' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: Math.round(20 * sc), width: '100%' }}>
       {items.map((item, i) => {
-        const delay = startFrame + i * 10
+        const accent = i % 2 === 0 ? c1 : c2
+        const delay = startFrame + i * 12
         const { num } = parseValueParts(item.value ?? '0')
         const pct = ((num ?? 0) / maxNum) * 100
-        const barW = interpolate(frame - delay, [0, 25], [0, pct], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })
-        const op = interpolate(frame - delay, [0, 10], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })
-        const accent = brandColors[i % brandColors.length]
+        const barW = interpolate(frame - delay, [0, 28], [0, pct], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })
+        const op = interpolate(frame - delay, [0, 12], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })
+        const spr = spring({ frame: frame - delay, fps, config: { damping: 16, stiffness: 90 } })
+        const y = interpolate(spr, [0, 1], [20, 0])
 
         return (
-          <div key={i} style={{ opacity: op }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: Math.round(5 * sc) }}>
-              <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: Math.round(22 * sc), color: '#94a3b8', fontWeight: 500 }}>{item.label}</span>
-              <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: Math.round(22 * sc), color: accent, fontWeight: 700 }}>{item.value}</span>
+          <div key={i} style={{ opacity: op, transform: `translateY(${y}px)` }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: Math.round(8 * sc) }}>
+              <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: Math.round(24 * sc), color: 'rgba(255,255,255,0.65)', fontWeight: 500 }}>{item.label}</span>
+              <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: Math.round(24 * sc), color: accent, fontWeight: 700 }}>{item.value}</span>
             </div>
-            <div style={{ height: Math.round(10 * sc), background: '#0e1a2e', borderRadius: 999 }}>
+            <div style={{ height: Math.round(12 * sc), background: 'rgba(255,255,255,0.06)', borderRadius: 999, overflow: 'hidden' }}>
               <div style={{
                 height: '100%', width: `${barW}%`,
-                background: `linear-gradient(90deg, ${accent}, ${accent}90)`,
+                background: `linear-gradient(90deg, ${accent}, ${accent}bb)`,
                 borderRadius: 999,
-                boxShadow: `0 0 ${Math.round(10 * sc)}px ${accent}50`,
+                boxShadow: `0 0 14px rgba(${hexToRgb(accent)},0.5)`,
               }} />
             </div>
           </div>
@@ -246,7 +222,21 @@ const BarsPanel: React.FC<{
   )
 }
 
-// ── Slide scene ──────────────────────────────────────────────────────────────
+// ── Background patterns ───────────────────────────────────────────────────────
+const BG_PATTERNS = [
+  // 0: radial center
+  (c1: string, c2: string) => `radial-gradient(ellipse at 50% 40%, rgba(${hexToRgb(c1)},0.28) 0%, transparent 55%), radial-gradient(ellipse at 80% 80%, rgba(${hexToRgb(c2)},0.18) 0%, transparent 45%)`,
+  // 1: top-left radial
+  (c1: string, c2: string) => `radial-gradient(ellipse at 15% 20%, rgba(${hexToRgb(c1)},0.32) 0%, transparent 50%), radial-gradient(ellipse at 85% 75%, rgba(${hexToRgb(c2)},0.22) 0%, transparent 48%)`,
+  // 2: bottom radial
+  (c1: string, c2: string) => `radial-gradient(ellipse at 50% 85%, rgba(${hexToRgb(c1)},0.30) 0%, transparent 52%), radial-gradient(ellipse at 20% 20%, rgba(${hexToRgb(c2)},0.16) 0%, transparent 42%)`,
+  // 3: right heavy
+  (c1: string, c2: string) => `radial-gradient(ellipse at 85% 45%, rgba(${hexToRgb(c1)},0.28) 0%, transparent 50%), radial-gradient(ellipse at 10% 60%, rgba(${hexToRgb(c2)},0.20) 0%, transparent 45%)`,
+  // 4: split diagonal
+  (c1: string, c2: string) => `radial-gradient(ellipse at 25% 30%, rgba(${hexToRgb(c1)},0.26) 0%, transparent 48%), radial-gradient(ellipse at 75% 70%, rgba(${hexToRgb(c2)},0.24) 0%, transparent 48%)`,
+]
+
+// ── Slide scene ───────────────────────────────────────────────────────────────
 const SlideScene: React.FC<{
   slide: Slide
   isFirst: boolean
@@ -258,8 +248,8 @@ const SlideScene: React.FC<{
   clientImageUrl?: string | null
   framesPerSlide: number
 }> = ({ slide, isFirst, isLast, brandColors, slideIndex, totalSlides, template, clientImageUrl, framesPerSlide }) => {
-  const brandColor1 = brandColors[0] ?? '#ff8c42'
-  const brandColor2 = brandColors[1 % brandColors.length] ?? '#6366f1'
+  const c1 = brandColors[0] ?? '#ff8c42'
+  const c2 = brandColors[1] ?? '#6366f1'
   const frame = useCurrentFrame()
   const { fps, width, height } = useVideoConfig()
 
@@ -271,119 +261,153 @@ const SlideScene: React.FC<{
   const fadeOut = interpolate(frame, [framesPerSlide - TRANSITION_FRAMES, framesPerSlide], [1, 0], { extrapolateLeft: 'clamp' })
 
   const words = slide.title.split(' ')
-  // Timing más espaciado para dar tiempo a leer
-  const textStartFrame = 20
-  const wordDelay      = 11  // más lento entre palabras
-  const highlightFrame = 8
-  const bodyFrame      = textStartFrame + words.length * wordDelay + 8
-  const graphicFrame   = bodyFrame + (slide.body ? 28 : 10)
-  const ctaFrame       = graphicFrame + (slide.graphic ? (slide.graphic.items.length * 12) : 0)
+  const textStartFrame = isFirst ? 14 : 18
+  const wordDelay      = 10
+  const bodyFrame      = textStartFrame + words.length * wordDelay + 10
+  const graphicFrame   = bodyFrame + (slide.body ? 24 : 8)
+  const ctaFrame       = graphicFrame + (slide.graphic ? (slide.graphic.items.length * 10) : 0)
 
-  const baseFontSize = words.length <= 3 ? 114 : words.length <= 5 ? 96 : words.length <= 7 ? 82 : 68
-  const fontSize    = Math.round(baseFontSize * sc)
-  const bodySize    = Math.round(38 * sc)
-  const badgeSize   = Math.round(26 * sc)
-  const padH        = Math.round(72 * sc)
-  const padBottom   = Math.round((isLandscape ? 60 : 150) * sc)
-  const dotsBottom  = Math.round(80 * sc)
-  const gap         = Math.round(28 * sc)
+  // Font size — first/last get bigger treatment
+  const baseFontSize = isFirst || isLast
+    ? (words.length <= 4 ? 118 : words.length <= 6 ? 102 : 86)
+    : (words.length <= 3 ? 108 : words.length <= 5 ? 90 : words.length <= 7 ? 76 : 64)
+  const fontSize  = Math.round(baseFontSize * sc)
+  const bodySize  = Math.round(36 * sc)
+  const badgeSize = Math.round(24 * sc)
+  const padH      = Math.round((isLandscape ? 100 : 72) * sc)
+  const padBottom = Math.round((isLast ? 180 : isLandscape ? 60 : 140) * sc)
+  const gap       = Math.round(24 * sc)
 
-  // Fondo dinámico por posición del slide
-  const bgPositions = ['50% 30%', '20% 60%', '80% 40%', '50% 70%', '30% 35%']
-  const bg2Positions = ['70% 70%', '80% 30%', '20% 70%', '70% 30%', '80% 60%']
-  const bgPos  = bgPositions[slideIndex % bgPositions.length]
-  const bgPos2 = bg2Positions[slideIndex % bg2Positions.length]
+  // Choose background pattern based on slide index
+  const bgGrad = BG_PATTERNS[slideIndex % BG_PATTERNS.length](c1, c2)
+
+  // Decorative large number for data slides
+  const hasDecoNum = !isFirst && !isLast && slide.graphic?.type === 'stats' && slide.graphic.items[0]?.value
 
   return (
     <AbsoluteFill style={{ opacity: fadeIn * fadeOut }}>
 
-      {/* ── Fondos siempre visibles en todos los slides ── */}
-      <div style={{ position: 'absolute', inset: 0, background: '#050c14' }} />
+      {/* ── Base background ── */}
+      <div style={{ position: 'absolute', inset: 0, background: '#06080f' }} />
 
-      {/* Imagen del cliente como fondo desenfocado (si existe) */}
+      {/* Client image blurred background */}
       {clientImageUrl && (
-        <Img
-          src={clientImageUrl}
-          style={{
-            position: 'absolute', inset: 0,
-            width: '100%', height: '100%',
-            objectFit: 'cover',
-            opacity: 0.08,
-            filter: 'blur(22px) saturate(1.6)',
-          }}
-        />
+        <Img src={clientImageUrl} style={{
+          position: 'absolute', inset: 0, width: '100%', height: '100%',
+          objectFit: 'cover', opacity: 0.07, filter: 'blur(24px) saturate(1.4)',
+        }} />
       )}
 
-      {/* Gradiente radial primario — siempre visible */}
+      {/* Brand color gradient */}
+      <div style={{ position: 'absolute', inset: 0, background: bgGrad }} />
+
+      {/* First slide: stronger color presence — large radial glow */}
+      {isFirst && (
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: `radial-gradient(ellipse at 50% 50%, rgba(${hexToRgb(c1)},0.18) 0%, transparent 60%)`,
+        }} />
+      )}
+
+      {/* Last slide: bottom gradient in brand color */}
+      {isLast && (
+        <div style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0, height: '50%',
+          background: `linear-gradient(to top, rgba(${hexToRgb(c1)},0.12) 0%, transparent 100%)`,
+        }} />
+      )}
+
+      {/* Subtle grid */}
       <div style={{
         position: 'absolute', inset: 0,
-        background: `radial-gradient(ellipse at ${bgPos}, ${brandColor1}30 0%, transparent 58%)`,
-      }} />
-      {/* Gradiente secundario con color 2 */}
-      <div style={{
-        position: 'absolute', inset: 0,
-        background: `radial-gradient(ellipse at ${bgPos2}, ${brandColor2}18 0%, transparent 50%)`,
-      }} />
-      {/* Grid de líneas finas */}
-      <div style={{
-        position: 'absolute', inset: 0,
-        backgroundImage: 'linear-gradient(rgba(255,255,255,0.016) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.016) 1px, transparent 1px)',
-        backgroundSize: `${Math.round(72 * sc)}px ${Math.round(72 * sc)}px`,
-      }} />
-      {/* Viñeta */}
-      <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at center, transparent 38%, rgba(5,12,20,0.82) 100%)' }} />
-
-      {/* ── Línea de acento superior ── */}
-      <div style={{
-        position: 'absolute', top: 0, left: '8%', right: '8%', height: Math.round(2 * sc),
-        background: `linear-gradient(90deg, transparent, ${brandColor1}70, ${brandColor2}50, transparent)`,
-        opacity: interpolate(frame, [4, 20], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
+        backgroundImage: 'linear-gradient(rgba(255,255,255,0.014) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.014) 1px, transparent 1px)',
+        backgroundSize: `${Math.round(80 * sc)}px ${Math.round(80 * sc)}px`,
       }} />
 
-      {/* ── Línea de acento inferior ── */}
+      {/* Vignette */}
+      <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at center, transparent 35%, rgba(6,8,15,0.88) 100%)' }} />
+
+      {/* ── Top accent line ── */}
       <div style={{
-        position: 'absolute', bottom: 0, left: '20%', right: '20%', height: Math.round(1 * sc),
-        background: `linear-gradient(90deg, transparent, ${brandColor1}30, transparent)`,
-        opacity: interpolate(frame, [10, 24], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
+        position: 'absolute', top: 0, left: '5%', right: '5%', height: Math.round(2 * sc),
+        background: `linear-gradient(90deg, transparent, ${c1}, ${c2}80, transparent)`,
+        opacity: interpolate(frame, [2, 18], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
       }} />
 
-      {/* ── Puntos de progreso ── */}
+      {/* ── Slide counter — top right ── */}
       <div style={{
-        position: 'absolute', bottom: dotsBottom, left: 0, right: 0,
+        position: 'absolute',
+        top: Math.round(52 * sc),
+        right: Math.round(56 * sc),
+        opacity: interpolate(frame, [10, 26], [0, 0.4], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
+        fontFamily: "'Space Grotesk', sans-serif",
+        fontSize: Math.round(22 * sc),
+        fontWeight: 600,
+        color: c1,
+        letterSpacing: 2,
+      }}>
+        {String(slideIndex + 1).padStart(2, '0')} / {String(totalSlides).padStart(2, '0')}
+      </div>
+
+      {/* ── Progress dots — bottom ── */}
+      <div style={{
+        position: 'absolute', bottom: Math.round(60 * sc), left: 0, right: 0,
         display: 'flex', justifyContent: 'center', gap: Math.round(10 * sc),
-        opacity: interpolate(frame, [14, 28], [0, 0.65], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
+        opacity: interpolate(frame, [12, 26], [0, 0.7], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
       }}>
         {Array.from({ length: totalSlides }).map((_, i) => (
           <div key={i} style={{
-            width: i === slideIndex ? Math.round(28 * sc) : Math.round(8 * sc),
-            height: Math.round(8 * sc),
+            width: i === slideIndex ? Math.round(32 * sc) : Math.round(7 * sc),
+            height: Math.round(7 * sc),
             borderRadius: 4,
-            background: i === slideIndex ? brandColor1 : '#1e3a5f',
+            background: i === slideIndex ? c1 : 'rgba(255,255,255,0.15)',
+            transition: 'width 0.3s',
           }} />
         ))}
       </div>
 
-      {/* ── Contenido ── */}
+      {/* ── Decorative large background number (stats slides) ── */}
+      {hasDecoNum && (
+        <div style={{
+          position: 'absolute', right: Math.round(-20 * sc), bottom: Math.round(160 * sc),
+          fontFamily: "'Space Grotesk', sans-serif",
+          fontSize: Math.round(380 * sc),
+          fontWeight: 800,
+          color: c1,
+          opacity: 0.04,
+          lineHeight: 1,
+          letterSpacing: -10,
+          pointerEvents: 'none',
+          userSelect: 'none',
+        }}>
+          {slide.graphic!.items[0]!.value}
+        </div>
+      )}
+
+      {/* ── Main content ── */}
       <div style={{
         position: 'absolute', inset: 0,
         display: 'flex', flexDirection: 'column',
-        justifyContent: 'center',
+        justifyContent: isFirst ? 'center' : isLast ? 'flex-end' : 'center',
         alignItems: isLandscape ? 'center' : 'flex-start',
         textAlign: isLandscape ? 'center' : 'left',
-        padding: `0 ${padH}px`,
+        padding: `${Math.round(100 * sc)}px ${padH}px`,
         paddingBottom: padBottom,
         gap,
       }}>
 
-        {/* Badge NOVA AGENCY — solo en templates de Nova */}
+        {/* Nova badge — solo templates Nova, primer/último slide */}
         {showNovaBadge && (isFirst || isLast) && (
           <div style={{
-            background: `${brandColor1}18`, border: `1px solid ${brandColor1}40`, borderRadius: 999,
-            padding: `${Math.round(9 * sc)}px ${Math.round(28 * sc)}px`,
-            opacity: interpolate(frame, [6, 22], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
-            transform: `translateY(${interpolate(frame, [6, 22], [18, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })}px)`,
+            background: `rgba(${hexToRgb(c1)},0.12)`,
+            border: `1px solid rgba(${hexToRgb(c1)},0.4)`,
+            borderRadius: 999,
+            padding: `${Math.round(8 * sc)}px ${Math.round(26 * sc)}px`,
+            opacity: interpolate(frame, [4, 20], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
+            transform: `translateY(${interpolate(frame, [4, 20], [16, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })}px)`,
+            alignSelf: isLandscape ? 'center' : 'flex-start',
           }}>
-            <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: badgeSize, color: brandColor1, fontWeight: 700, letterSpacing: 3 }}>
+            <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: badgeSize, color: c1, fontWeight: 700, letterSpacing: 3 }}>
               NOVA AGENCY
             </span>
           </div>
@@ -392,36 +416,44 @@ const SlideScene: React.FC<{
         {/* Highlight pill — slides del medio */}
         {slide.highlight && !isFirst && !isLast && (
           <div style={{
-            background: `${brandColor1}12`, border: `1px solid ${brandColor1}30`, borderRadius: Math.round(10 * sc),
-            padding: `${Math.round(7 * sc)}px ${Math.round(20 * sc)}px`,
-            opacity: interpolate(frame, [highlightFrame, highlightFrame + 16], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
-            transform: `translateY(${interpolate(frame, [highlightFrame, highlightFrame + 16], [16, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })}px)`,
+            background: `rgba(${hexToRgb(c1)},0.1)`,
+            border: `1px solid rgba(${hexToRgb(c1)},0.28)`,
+            borderRadius: Math.round(8 * sc),
+            padding: `${Math.round(6 * sc)}px ${Math.round(18 * sc)}px`,
+            opacity: interpolate(frame, [8, 22], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
+            transform: `translateY(${interpolate(frame, [8, 22], [14, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })}px)`,
+            alignSelf: isLandscape ? 'center' : 'flex-start',
           }}>
-            <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: badgeSize, color: brandColor1, fontWeight: 700 }}>
+            <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: badgeSize, color: c1, fontWeight: 700 }}>
               {slide.highlight}
             </span>
           </div>
         )}
 
-        {/* Título — palabras con animación suave (sin pop) */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', justifyContent: isLandscape ? 'center' : 'flex-start', gap: `${Math.round(8 * sc)}px ${Math.round(14 * sc)}px` }}>
+        {/* ── Título — palabra por palabra ── */}
+        <div style={{
+          display: 'flex', flexWrap: 'wrap', alignItems: 'baseline',
+          justifyContent: isLandscape ? 'center' : 'flex-start',
+          gap: `${Math.round(6 * sc)}px ${Math.round(12 * sc)}px`,
+        }}>
           {words.map((word, i) => {
             const isAccent = word.startsWith('*') && word.endsWith('*')
             const displayWord = isAccent ? word.slice(1, -1) : word
             const delay = textStartFrame + i * wordDelay
-            const spr = spring({ frame: frame - delay, fps, config: { damping: 18, stiffness: 90 } })
+            const spr = spring({ frame: frame - delay, fps, config: { damping: 20, stiffness: 85 } })
             return (
               <span key={i} style={{
                 fontFamily: "'Space Grotesk', sans-serif",
                 fontSize,
                 fontWeight: 800,
-                color: isAccent ? brandColor1 : '#f0f6ff',
-                lineHeight: 1.06,
+                color: isAccent ? c1 : '#eef4ff',
+                lineHeight: 1.05,
                 letterSpacing: -2,
-                transform: `translateY(${interpolate(spr, [0, 1], [52 * sc, 0])}px)`,
-                transformOrigin: isLandscape ? 'center bottom' : 'left bottom',
-                opacity: interpolate(frame - delay, [0, 14], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
-                textShadow: isAccent ? `0 0 60px ${brandColor1}55, 0 2px 20px rgba(0,0,0,0.7)` : '0 2px 30px rgba(0,0,0,0.5)',
+                transform: `translateY(${interpolate(spr, [0, 1], [55 * sc, 0])}px)`,
+                opacity: interpolate(frame - delay, [0, 16], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
+                textShadow: isAccent
+                  ? `0 0 80px rgba(${hexToRgb(c1)},0.6), 0 2px 24px rgba(0,0,0,0.8)`
+                  : '0 2px 32px rgba(0,0,0,0.55)',
               }}>
                 {displayWord}
               </span>
@@ -429,49 +461,60 @@ const SlideScene: React.FC<{
           })}
         </div>
 
-        {/* Body */}
+        {/* ── Separador — solo primer/último ── */}
+        {(isFirst || isLast) && (
+          <div style={{
+            width: interpolate(frame, [textStartFrame + words.length * wordDelay, textStartFrame + words.length * wordDelay + 30], [0, Math.round(120 * sc)], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
+            height: Math.round(3 * sc),
+            background: `linear-gradient(90deg, ${c1}, ${c2})`,
+            borderRadius: 2,
+            alignSelf: isLandscape ? 'center' : 'flex-start',
+          }} />
+        )}
+
+        {/* ── Body ── */}
         {slide.body && (
           <p style={{
-            fontFamily: "'Space Grotesk', sans-serif", fontSize: bodySize, color: '#7a9ab8',
-            lineHeight: 1.55, maxWidth: Math.round(880 * sc), margin: 0, fontWeight: 400,
-            opacity: interpolate(frame, [bodyFrame, bodyFrame + 20], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
-            transform: `translateY(${interpolate(frame, [bodyFrame, bodyFrame + 20], [20 * sc, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })}px)`,
+            fontFamily: "'Space Grotesk', sans-serif",
+            fontSize: bodySize,
+            color: 'rgba(255,255,255,0.55)',
+            lineHeight: 1.6,
+            maxWidth: Math.round(900 * sc),
+            margin: 0,
+            fontWeight: 400,
+            opacity: interpolate(frame, [bodyFrame, bodyFrame + 22], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
+            transform: `translateY(${interpolate(frame, [bodyFrame, bodyFrame + 22], [18 * sc, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })}px)`,
           }}>
             {slide.body}
           </p>
         )}
 
-        {/* Graphic panel */}
+        {/* ── Graphic ── */}
         {slide.graphic && (
           <div style={{
             width: '100%',
-            opacity: interpolate(frame, [graphicFrame, graphicFrame + 12], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
-            transform: `translateY(${interpolate(frame, [graphicFrame, graphicFrame + 12], [24 * sc, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })}px)`,
+            opacity: interpolate(frame, [graphicFrame, graphicFrame + 14], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
+            transform: `translateY(${interpolate(frame, [graphicFrame, graphicFrame + 14], [22 * sc, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })}px)`,
           }}>
-            {slide.graphic.type === 'stats' && (
-              <StatsPanel items={slide.graphic.items} brandColors={brandColors} startFrame={graphicFrame} sc={sc} />
-            )}
-            {slide.graphic.type === 'list' && (
-              <ListPanel items={slide.graphic.items} brandColors={brandColors} startFrame={graphicFrame} sc={sc} />
-            )}
-            {slide.graphic.type === 'bars' && (
-              <BarsPanel items={slide.graphic.items} brandColors={brandColors} startFrame={graphicFrame} sc={sc} />
-            )}
+            {slide.graphic.type === 'stats' && <StatsPanel items={slide.graphic.items} brandColors={brandColors} startFrame={graphicFrame} sc={sc} />}
+            {slide.graphic.type === 'list'  && <ListPanel  items={slide.graphic.items} brandColors={brandColors} startFrame={graphicFrame} sc={sc} />}
+            {slide.graphic.type === 'bars'  && <BarsPanel  items={slide.graphic.items} brandColors={brandColors} startFrame={graphicFrame} sc={sc} />}
           </div>
         )}
 
-        {/* CTA pill — último slide */}
+        {/* ── CTA pill — último slide ── */}
         {isLast && slide.highlight && (
           <div style={{
-            background: `linear-gradient(135deg, ${brandColor1}20, ${brandColor2}15)`,
-            border: `1px solid ${brandColor1}55`,
-            borderRadius: Math.round(14 * sc),
-            padding: `${Math.round(14 * sc)}px ${Math.round(38 * sc)}px`,
-            opacity: interpolate(frame, [ctaFrame, ctaFrame + 22], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
-            transform: `translateY(${interpolate(frame, [ctaFrame, ctaFrame + 22], [18 * sc, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })}px)`,
-            boxShadow: `0 0 40px ${brandColor1}20`,
+            background: `linear-gradient(135deg, rgba(${hexToRgb(c1)},0.22), rgba(${hexToRgb(c2)},0.18))`,
+            border: `1.5px solid rgba(${hexToRgb(c1)},0.6)`,
+            borderRadius: Math.round(16 * sc),
+            padding: `${Math.round(18 * sc)}px ${Math.round(44 * sc)}px`,
+            opacity: interpolate(frame, [ctaFrame, ctaFrame + 24], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
+            transform: `translateY(${interpolate(frame, [ctaFrame, ctaFrame + 24], [20 * sc, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })}px)`,
+            boxShadow: `0 0 50px rgba(${hexToRgb(c1)},0.25), inset 0 1px 0 rgba(255,255,255,0.08)`,
+            alignSelf: isLandscape ? 'center' : 'flex-start',
           }}>
-            <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: Math.round(36 * sc), color: brandColor1, fontWeight: 700 }}>
+            <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: Math.round(40 * sc), color: c1, fontWeight: 700 }}>
               {slide.highlight}
             </span>
           </div>
@@ -481,18 +524,15 @@ const SlideScene: React.FC<{
   )
 }
 
-// ── Main composition ─────────────────────────────────────────────────────────
+// ── Main composition ──────────────────────────────────────────────────────────
 export const AgencyVideo: React.FC<AgencyVideoProps> = ({
-  // clientName and format are used via calculateMetadata / worker — keep in props but unused here
   clientName: _clientName, template, slides, brandColors, format: _format = 'vertical', clientImageUrl, framesPerSlide,
 }) => {
   const colors = brandColors?.length ? brandColors : ['#ff8c42', '#6366f1']
   const fps    = framesPerSlide ?? DEFAULT_FPS
   return (
-    <AbsoluteFill style={{ background: '#050c14' }}>
+    <AbsoluteFill style={{ background: '#06080f' }}>
       <style>{GOOGLE_FONTS}</style>
-
-      {/* Slides */}
       {slides.map((slide, i) => (
         <Sequence key={i} from={i * fps} durationInFrames={fps}>
           <SlideScene
@@ -511,4 +551,3 @@ export const AgencyVideo: React.FC<AgencyVideoProps> = ({
     </AbsoluteFill>
   )
 }
-
