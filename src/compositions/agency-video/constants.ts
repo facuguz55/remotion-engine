@@ -14,6 +14,7 @@ export const TEMPLATE_LABELS: Record<string, string> = {
   onboarding: 'Onboarding',
   resultados: 'Resultados',
   servicio: 'Servicio',
+  sesion: 'Sesión',
 }
 
 export type VideoFormat = 'vertical' | 'square' | 'horizontal'

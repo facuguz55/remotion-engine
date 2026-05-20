@@ -23,6 +23,7 @@ const TEMPLATE_PROMPTS: Record<string, string> = {
   onboarding: 'Dale la bienvenida al nuevo cliente. Explicá cómo trabajamos, qué puede esperar y cuáles son los próximos pasos.',
   resultados: 'Mostrá los resultados y métricas concretas obtenidas para el cliente. Números, logros y proyección.',
   servicio:   'Explicá un servicio específico de Nova Agency en detalle. Qué es, cómo funciona y qué beneficios trae.',
+  sesion:     'Resumí lo que se trabajó en la sesión de hoy con el cliente. Tareas completadas, decisiones tomadas y próximos pasos concretos. Tono directo, como un cierre de reunión.',
 }
 
 async function generateSlides(job: Record<string, unknown>, client: Record<string, unknown>, project: Record<string, unknown> | null): Promise<unknown[]> {
@@ -126,7 +127,8 @@ async function processJob(job: Record<string, unknown>) {
       : []
     const brandColors = jobBrandColors?.length ? jobBrandColors : clientColors.length ? clientColors : ['#ff8c42', '#6366f1']
 
-    const framesPerSlide = ((job.props as Record<string, unknown>)?.frames_per_slide as number) || 180
+    const framesPerSlide       = ((job.props as Record<string, unknown>)?.frames_per_slide as number) || null
+    const totalDurationSeconds = ((job.props as Record<string, unknown>)?.total_duration_seconds as number) || null
 
     const inputProps = {
       clientName: client.name,
@@ -135,7 +137,7 @@ async function processJob(job: Record<string, unknown>) {
       brandColors,
       format: ((job.props as Record<string, unknown>)?.format as string) || 'vertical',
       clientImageUrl: (client.photo_url as string) || null,
-      framesPerSlide,
+      ...(totalDurationSeconds ? { totalDurationSeconds } : framesPerSlide ? { framesPerSlide } : {}),
     }
 
     await supabase.from('video_jobs').update({
