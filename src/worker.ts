@@ -27,8 +27,9 @@ const TEMPLATE_PROMPTS: Record<string, string> = {
 }
 
 async function generateSlides(job: Record<string, unknown>, client: Record<string, unknown>, project: Record<string, unknown> | null): Promise<unknown[]> {
-  const extraInfo = (job.props as Record<string, unknown>)?.extra_info as string || ''
-  const instructions = (job.props as Record<string, unknown>)?.based_on_job
+  const extraInfo     = (job.props as Record<string, unknown>)?.extra_info as string || ''
+  const technicality  = (job.props as Record<string, unknown>)?.technicality as string || 'con'
+  const instructions  = (job.props as Record<string, unknown>)?.based_on_job
     ? `INSTRUCCIONES DE EDICIÓN: ${extraInfo}. Tomá como base estos slides anteriores y modificalos: ${JSON.stringify((job.props as Record<string, unknown>)?.previous_slides)}`
     : extraInfo
 
@@ -55,7 +56,8 @@ REGLAS CRÍTICAS:
 - El video es PARA el cliente o SOBRE el cliente — no promoción de Nova Agency (salvo que el template lo pida)
 - Respondé SOLO con JSON válido, sin markdown: { "slides": [...] }
 - NUNCA uses saltos de línea reales dentro de strings JSON. Si necesitás salto, usá el espacio normal.
-- Todos los strings deben estar en una sola línea, sin caracteres de control.`
+- Todos los strings deben estar en una sola línea, sin caracteres de control.
+${technicality === 'sin' ? `IMPORTANTE — SIN TECNICISMO: Explicá todo en lenguaje simple y cotidiano. NUNCA uses: CTR, funnel, KPI, conversión, ROI, engagement, algoritmo, copy, tráfico, lead, landing, CTA, pauta, orgánico. Reemplazalos por palabras de todos los días: "cuánta gente te escribe", "cuánta gente compra", "lo que gastás en publicidad vs lo que ganás", "la gente que ve tus posts".` : ''}`
 
   const userMessage = `Cliente: ${client.name}
 Industria/rubro: ${(client as Record<string, unknown>).industry || (client as Record<string, unknown>).business_type || 'No especificado'}

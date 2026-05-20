@@ -100,6 +100,28 @@ export const calculateMetadata: CalculateMetadataFunction<any> = ({ props }: { p
 
 const NOVA_TEMPLATES = new Set(['prospecto', 'trayecto'])
 
+// ── Title token parser — maneja *palabra* y **palabra** ─────────────────────
+function parseTitleTokens(title: string): Array<{ text: string; accent: boolean }> {
+  // Normalizar doble asterisco a simple
+  const normalized = title.replace(/\*\*([^*]+)\*\*/g, '*$1*')
+  const tokens: Array<{ text: string; accent: boolean }> = []
+  const parts = normalized.split(/(\*[^*]+\*)/)
+  for (const part of parts) {
+    if (!part) continue
+    if (part.startsWith('*') && part.endsWith('*')) {
+      // Puede ser *una palabra* o *varias palabras* — cada una es un token accent
+      for (const w of part.slice(1, -1).split(/\s+/)) {
+        if (w) tokens.push({ text: w, accent: true })
+      }
+    } else {
+      for (const w of part.split(/\s+/)) {
+        if (w) tokens.push({ text: w, accent: false })
+      }
+    }
+  }
+  return tokens
+}
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function hexToRgb(hex: string): string {
   const h = hex.replace('#', '')
@@ -247,9 +269,10 @@ const SlideScene: React.FC<{
   slideIndex: number
   totalSlides: number
   template: string
+  clientName: string
   clientImageUrl?: string | null
   framesPerSlide: number
-}> = ({ slide, isFirst, isLast, brandColors, slideIndex, totalSlides, template, clientImageUrl, framesPerSlide }) => {
+}> = ({ slide, isFirst, isLast, brandColors, slideIndex, totalSlides, template, clientName, clientImageUrl, framesPerSlide }) => {
   const c1    = brandColors[0] ?? '#ff8c42'
   const c2    = brandColors[1] ?? '#6366f1'
   const frame = useCurrentFrame()
@@ -262,16 +285,17 @@ const SlideScene: React.FC<{
   const fadeIn  = interpolate(frame, [0, TRANSITION_FRAMES], [0, 1], { extrapolateRight: 'clamp' })
   const fadeOut = interpolate(frame, [framesPerSlide - TRANSITION_FRAMES, framesPerSlide], [1, 0], { extrapolateLeft: 'clamp' })
 
-  const words          = slide.title.split(' ')
+  const tokens         = parseTitleTokens(slide.title)
+  const wordCount      = tokens.length
   const textStartFrame = isFirst ? 8 : 12
-  const wordDelay      = 5   // 0.17s por palabra — rápido pero legible
-  const bodyFrame      = textStartFrame + words.length * wordDelay + 8
+  const wordDelay      = 5
+  const bodyFrame      = textStartFrame + wordCount * wordDelay + 8
   const graphicFrame   = bodyFrame + (slide.body ? 20 : 6)
   const ctaFrame       = graphicFrame + (slide.graphic ? (slide.graphic.items.length * 10) : 0)
 
   const baseFontSize = isFirst || isLast
-    ? (words.length <= 4 ? 118 : words.length <= 6 ? 102 : 86)
-    : (words.length <= 3 ? 108 : words.length <= 5 ? 90 : words.length <= 7 ? 76 : 64)
+    ? (wordCount <= 4 ? 118 : wordCount <= 6 ? 102 : 86)
+    : (wordCount <= 3 ? 108 : wordCount <= 5 ? 90 : wordCount <= 7 ? 76 : 64)
   const fontSize  = Math.round(baseFontSize * sc)
   const bodySize  = Math.round(36 * sc)
   const badgeSize = Math.round(24 * sc)
@@ -328,6 +352,16 @@ const SlideScene: React.FC<{
       {/* Main content */}
       <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: isFirst ? 'center' : isLast ? 'flex-end' : 'center', alignItems: isLandscape ? 'center' : 'flex-start', textAlign: isLandscape ? 'center' : 'left', padding: `${Math.round(100 * sc)}px ${padH}px`, paddingBottom: padBottom, gap }}>
 
+        {/* Nombre del cliente — primer slide, sobre el título */}
+        {isFirst && clientName && !showNovaBadge && (
+          <div style={{ opacity: interpolate(frame, [4, 18], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }), transform: `translateY(${interpolate(frame, [4, 18], [14, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })}px)`, display: 'flex', alignItems: 'center', gap: Math.round(8 * sc), alignSelf: isLandscape ? 'center' : 'flex-start' }}>
+            <div style={{ width: Math.round(6 * sc), height: Math.round(6 * sc), borderRadius: '50%', background: c1 }} />
+            <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: badgeSize, color: `rgba(${hexToRgb(c1)},0.9)`, fontWeight: 700, letterSpacing: 1 }}>
+              {clientName}
+            </span>
+          </div>
+        )}
+
         {/* Nova badge */}
         {showNovaBadge && (isFirst || isLast) && (
           <div style={{ background: `rgba(${hexToRgb(c1)},0.12)`, border: `1px solid rgba(${hexToRgb(c1)},0.4)`, borderRadius: 999, padding: `${Math.round(8 * sc)}px ${Math.round(26 * sc)}px`, opacity: interpolate(frame, [4, 18], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }), transform: `translateY(${interpolate(frame, [4, 18], [14, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })}px)`, alignSelf: isLandscape ? 'center' : 'flex-start' }}>
@@ -342,16 +376,14 @@ const SlideScene: React.FC<{
           </div>
         )}
 
-        {/* Title words */}
+        {/* Title tokens — asteriscos detectados correctamente */}
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', justifyContent: isLandscape ? 'center' : 'flex-start', gap: `${Math.round(5 * sc)}px ${Math.round(12 * sc)}px` }}>
-          {words.map((word, i) => {
-            const isAccent   = word.startsWith('*') && word.endsWith('*')
-            const displayWord = isAccent ? word.slice(1, -1) : word
-            const delay      = textStartFrame + i * wordDelay
-            const spr        = spring({ frame: frame - delay, fps, config: { damping: 22, stiffness: 80 } })
+          {tokens.map((token, i) => {
+            const delay = textStartFrame + i * wordDelay
+            const spr   = spring({ frame: frame - delay, fps, config: { damping: 22, stiffness: 80 } })
             return (
-              <span key={i} style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize, fontWeight: 800, color: isAccent ? c1 : '#eef4ff', lineHeight: 1.05, letterSpacing: -2, transform: `translateY(${interpolate(spr, [0, 1], [50 * sc, 0])}px)`, opacity: interpolate(frame - delay, [0, 14], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }), textShadow: isAccent ? `0 0 80px rgba(${hexToRgb(c1)},0.6), 0 2px 24px rgba(0,0,0,0.8)` : '0 2px 32px rgba(0,0,0,0.55)' }}>
-                {displayWord}
+              <span key={i} style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize, fontWeight: 800, color: token.accent ? c1 : '#eef4ff', lineHeight: 1.05, letterSpacing: -2, transform: `translateY(${interpolate(spr, [0, 1], [50 * sc, 0])}px)`, opacity: interpolate(frame - delay, [0, 14], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }), textShadow: token.accent ? `0 0 80px rgba(${hexToRgb(c1)},0.6), 0 2px 24px rgba(0,0,0,0.8)` : '0 2px 32px rgba(0,0,0,0.55)' }}>
+                {token.text}
               </span>
             )
           })}
@@ -359,7 +391,7 @@ const SlideScene: React.FC<{
 
         {/* Separator — first/last only */}
         {(isFirst || isLast) && (
-          <div style={{ width: interpolate(frame, [textStartFrame + words.length * wordDelay, textStartFrame + words.length * wordDelay + 26], [0, Math.round(120 * sc)], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }), height: Math.round(3 * sc), background: `linear-gradient(90deg, ${c1}, ${c2})`, borderRadius: 2, alignSelf: isLandscape ? 'center' : 'flex-start' }} />
+          <div style={{ width: interpolate(frame, [textStartFrame + wordCount * wordDelay, textStartFrame + wordCount * wordDelay + 26], [0, Math.round(120 * sc)], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }), height: Math.round(3 * sc), background: `linear-gradient(90deg, ${c1}, ${c2})`, borderRadius: 2, alignSelf: isLandscape ? 'center' : 'flex-start' }} />
         )}
 
         {/* Body */}
@@ -391,7 +423,7 @@ const SlideScene: React.FC<{
 
 // ── Main composition ──────────────────────────────────────────────────────────
 export const AgencyVideo: React.FC<AgencyVideoProps> = ({
-  clientName: _clientName, template, slides, brandColors, format: _format = 'vertical', clientImageUrl, framesPerSlide, totalDurationSeconds,
+  clientName, template, slides, brandColors, format: _format = 'vertical', clientImageUrl, framesPerSlide, totalDurationSeconds,
 }) => {
   const colors    = brandColors?.length ? brandColors : ['#ff8c42', '#6366f1']
   const durations = getSlideDurations(slides, totalDurationSeconds ?? (framesPerSlide ? undefined : undefined))
@@ -422,6 +454,7 @@ export const AgencyVideo: React.FC<AgencyVideoProps> = ({
             slideIndex={i}
             totalSlides={slides.length}
             template={template}
+            clientName={clientName}
             clientImageUrl={clientImageUrl}
             framesPerSlide={finalDurations[i]}
           />
