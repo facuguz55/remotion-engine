@@ -52,7 +52,9 @@ REGLAS CRÍTICAS:
 - Español rioplatense (vos, no tú), tono directo y natural
 - Mín 4, máx 6 slides
 - El video es PARA el cliente o SOBRE el cliente — no promoción de Nova Agency (salvo que el template lo pida)
-- Respondé SOLO con JSON válido, sin markdown: { "slides": [...] }`
+- Respondé SOLO con JSON válido, sin markdown: { "slides": [...] }
+- NUNCA uses saltos de línea reales dentro de strings JSON. Si necesitás salto, usá el espacio normal.
+- Todos los strings deben estar en una sola línea, sin caracteres de control.`
 
   const userMessage = `Cliente: ${client.name}
 Industria/rubro: ${(client as Record<string, unknown>).industry || (client as Record<string, unknown>).business_type || 'No especificado'}
@@ -74,7 +76,18 @@ IMPORTANTE: Este video es para/sobre ${client.name}. Usá su nombre, su rubro y 
   const jsonMatch = text.match(/\{[\s\S]*\}/)
   if (!jsonMatch) throw new Error(`Claude no devolvió JSON válido. Respuesta: ${text.substring(0, 200)}`)
 
-  const parsed = JSON.parse(jsonMatch[0])
+  // Limpiar caracteres de control dentro de strings JSON (saltos de línea sin escapar, tabs, etc.)
+  const cleaned = jsonMatch[0].replace(
+    /"((?:[^"\\]|\\.)*)"/g,
+    (_match, inner: string) => `"${inner.replace(/[\n\r\t]/g, ' ').replace(/\s+/g, ' ').trim()}"`
+  )
+
+  let parsed: { slides?: unknown }
+  try {
+    parsed = JSON.parse(cleaned)
+  } catch (e) {
+    throw new Error(`JSON inválido incluso después de limpiar. Error: ${e}. Raw: ${cleaned.substring(0, 300)}`)
+  }
   if (!Array.isArray(parsed.slides)) throw new Error('El JSON no tiene un campo "slides" válido')
   return parsed.slides
 }
