@@ -35,8 +35,7 @@ export interface AgencyVideoProps {
   clientName: string
   template: string
   slides: Slide[]
-  brandColor1: string
-  brandColor2: string
+  brandColors: string[]
   format?: VideoFormat
   clientImageUrl?: string | null
 }
@@ -44,8 +43,7 @@ export interface AgencyVideoProps {
 export const DEFAULT_AGENCY_PROPS: AgencyVideoProps = {
   clientName: 'Cliente Demo',
   template: 'resultados',
-  brandColor1: '#ff8c42',
-  brandColor2: '#6366f1',
+  brandColors: ['#ff8c42', '#6366f1'],
   format: 'vertical',
   slides: [
     { title: '*Resultados reales* en 90 días', body: 'Lo que logramos juntos — con datos concretos', highlight: 'NOVA AGENCY' },
@@ -97,11 +95,10 @@ const AnimatedValue: React.FC<{ raw: string; frame: number; delay: number; durat
 // ── Stats panel (metric cards) ───────────────────────────────────────────────
 const StatsPanel: React.FC<{
   items: SlideGraphicItem[]
-  brandColor1: string
-  brandColor2: string
+  brandColors: string[]
   startFrame: number
   sc: number
-}> = ({ items, brandColor1, brandColor2, startFrame, sc }) => {
+}> = ({ items, brandColors, startFrame, sc }) => {
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()
 
@@ -113,7 +110,7 @@ const StatsPanel: React.FC<{
         const cardOp = interpolate(spr, [0, 1], [0, 1])
         const cardSc = interpolate(spr, [0, 1], [0.6, 1])
         const cardY  = interpolate(spr, [0, 1], [30, 0])
-        const accent = i % 2 === 0 ? brandColor1 : brandColor2
+        const accent = brandColors[i % brandColors.length]
 
         return (
           <div key={i} style={{
@@ -158,10 +155,11 @@ const StatsPanel: React.FC<{
 // ── List panel (feature checklist) ──────────────────────────────────────────
 const ListPanel: React.FC<{
   items: SlideGraphicItem[]
-  brandColor1: string
+  brandColors: string[]
   startFrame: number
   sc: number
-}> = ({ items, brandColor1, startFrame, sc }) => {
+}> = ({ items, brandColors, startFrame, sc }) => {
+  const brandColor1 = brandColors[0] ?? '#ff8c42'
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()
 
@@ -205,11 +203,10 @@ const ListPanel: React.FC<{
 // ── Bars panel (comparison bars) ─────────────────────────────────────────────
 const BarsPanel: React.FC<{
   items: SlideGraphicItem[]
-  brandColor1: string
-  brandColor2: string
+  brandColors: string[]
   startFrame: number
   sc: number
-}> = ({ items, brandColor1, brandColor2, startFrame, sc }) => {
+}> = ({ items, brandColors, startFrame, sc }) => {
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()
 
@@ -223,7 +220,7 @@ const BarsPanel: React.FC<{
         const pct = ((num ?? 0) / maxNum) * 100
         const barW = interpolate(frame - delay, [0, 25], [0, pct], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })
         const op = interpolate(frame - delay, [0, 10], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })
-        const accent = i % 2 === 0 ? brandColor1 : brandColor2
+        const accent = brandColors[i % brandColors.length]
 
         return (
           <div key={i} style={{ opacity: op }}>
@@ -251,12 +248,13 @@ const SlideScene: React.FC<{
   slide: Slide
   isFirst: boolean
   isLast: boolean
-  brandColor1: string
-  brandColor2: string
+  brandColors: string[]
   slideIndex: number
   totalSlides: number
   clientImageUrl?: string | null
-}> = ({ slide, isFirst, isLast, brandColor1, brandColor2, slideIndex, totalSlides, clientImageUrl }) => {
+}> = ({ slide, isFirst, isLast, brandColors, slideIndex, totalSlides, clientImageUrl }) => {
+  const brandColor1 = brandColors[0] ?? '#ff8c42'
+  const brandColor2 = brandColors[1 % brandColors.length] ?? '#6366f1'
   const frame = useCurrentFrame()
   const { fps, width, height } = useVideoConfig()
 
@@ -446,13 +444,13 @@ const SlideScene: React.FC<{
             opacity: interpolate(frame, [graphicFrame, graphicFrame + 8], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
           }}>
             {slide.graphic.type === 'stats' && (
-              <StatsPanel items={slide.graphic.items} brandColor1={brandColor1} brandColor2={brandColor2} startFrame={graphicFrame} sc={sc} />
+              <StatsPanel items={slide.graphic.items} brandColors={brandColors} startFrame={graphicFrame} sc={sc} />
             )}
             {slide.graphic.type === 'list' && (
-              <ListPanel items={slide.graphic.items} brandColor1={brandColor1} startFrame={graphicFrame} sc={sc} />
+              <ListPanel items={slide.graphic.items} brandColors={brandColors} startFrame={graphicFrame} sc={sc} />
             )}
             {slide.graphic.type === 'bars' && (
-              <BarsPanel items={slide.graphic.items} brandColor1={brandColor1} brandColor2={brandColor2} startFrame={graphicFrame} sc={sc} />
+              <BarsPanel items={slide.graphic.items} brandColors={brandColors} startFrame={graphicFrame} sc={sc} />
             )}
           </div>
         )}
@@ -477,8 +475,9 @@ const SlideScene: React.FC<{
 
 // ── Main composition ─────────────────────────────────────────────────────────
 export const AgencyVideo: React.FC<AgencyVideoProps> = ({
-  clientName, template, slides, brandColor1, brandColor2, format = 'vertical', clientImageUrl,
+  clientName, template, slides, brandColors, format = 'vertical', clientImageUrl,
 }) => {
+  const colors = brandColors?.length ? brandColors : ['#ff8c42', '#6366f1']
   return (
     <AbsoluteFill style={{ background: '#050c14' }}>
       <style>{GOOGLE_FONTS}</style>
@@ -497,8 +496,7 @@ export const AgencyVideo: React.FC<AgencyVideoProps> = ({
             slide={slide}
             isFirst={i === 0}
             isLast={i === slides.length - 1}
-            brandColor1={brandColor1}
-            brandColor2={brandColor2}
+            brandColors={colors}
             slideIndex={i}
             totalSlides={slides.length}
             clientImageUrl={clientImageUrl}

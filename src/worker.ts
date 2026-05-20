@@ -102,15 +102,17 @@ async function processJob(job: Record<string, unknown>) {
       return
     }
 
-    const brandColor1 = client.has_brand_colors && client.brand_color1 ? client.brand_color1 : '#ff8c42'
-    const brandColor2 = client.has_brand_colors && client.brand_color2 ? client.brand_color2 : '#6366f1'
+    const jobBrandColors = (job.props as Record<string, unknown>)?.brand_colors as string[] | null
+    const clientColors = client.has_brand_colors
+      ? [client.brand_color1, client.brand_color2].filter(Boolean) as string[]
+      : []
+    const brandColors = jobBrandColors?.length ? jobBrandColors : clientColors.length ? clientColors : ['#ff8c42', '#6366f1']
 
     const inputProps = {
       clientName: client.name,
       template: job.template,
       slides,
-      brandColor1,
-      brandColor2,
+      brandColors,
       format: ((job.props as Record<string, unknown>)?.format as string) || 'vertical',
       clientImageUrl: (client.photo_url as string) || null,
     }
