@@ -61,18 +61,41 @@ export const DEFAULT_AGENCY_PROPS: AgencyVideoProps = {
   ],
 }
 
-// ── Duración dinámica por slide según cantidad de texto/gráficos ─────────────
+// ── Duración dinámica — calculada sobre los tiempos REALES de animación ──────
+// Debe coincidir exactamente con las constantes de SlideScene
 export function calcSlideDuration(slide: Slide): number {
-  const titleWords  = slide.title.replace(/\*/g, '').split(/\s+/).length
-  const bodyWords   = slide.body ? slide.body.split(/\s+/).length : 0
-  const graphicItems = slide.graphic?.items.length ?? 0
+  const wordCount  = slide.title.replace(/\*/g, '').split(/\s+/).filter(Boolean).length
+  const hasBody    = !!slide.body
+  const itemCount  = slide.graphic?.items.length ?? 0
+  const isStats    = slide.graphic?.type === 'stats'
 
-  // Tiempo de lectura: ~2.5 palabras/seg para video social
-  const readFrames    = Math.ceil((titleWords + bodyWords * 0.6) / 2.5 * 30)
-  const graphicFrames = graphicItems * 16
-  const leadIn        = 20
+  // Constantes idénticas a SlideScene
+  const TEXT_START      = 12
+  const WORD_DELAY      = 5
+  const TITLE_VISIBLE   = 14   // fade-in de la última palabra
+  const BODY_OFFSET     = 8
+  const BODY_FADE       = 18
+  const GFX_OFFSET      = 20   // delay después de body
+  const GFX_OFFSET_NONE = 6    // delay sin body
+  const ITEM_STAGGER    = isStats ? 8 : 9
+  const SPRING_SETTLE   = 28
+  const COUNTER_ANIM    = isStats ? 22 : 0
+  const DWELL           = 42   // tiempo de vista después de todo animado
+  // TRANSITION_FRAMES = 18 (importado de constants)
 
-  return Math.min(Math.max(readFrames + graphicFrames + leadIn, 70), 300)
+  let lastEnd = TEXT_START + wordCount * WORD_DELAY + TITLE_VISIBLE
+
+  if (hasBody) {
+    lastEnd = lastEnd + BODY_OFFSET + BODY_FADE
+  }
+
+  if (itemCount > 0) {
+    const gfxStart = lastEnd + (hasBody ? GFX_OFFSET : GFX_OFFSET_NONE)
+    const lastItem = gfxStart + (itemCount - 1) * ITEM_STAGGER
+    lastEnd = lastItem + SPRING_SETTLE + COUNTER_ANIM
+  }
+
+  return lastEnd + DWELL + TRANSITION_FRAMES
 }
 
 // Distribuye total (si se fijó) o usa duraciones naturales
@@ -352,8 +375,8 @@ const SlideScene: React.FC<{
       {/* Main content */}
       <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: isFirst ? 'center' : isLast ? 'flex-end' : 'center', alignItems: isLandscape ? 'center' : 'flex-start', textAlign: isLandscape ? 'center' : 'left', padding: `${Math.round(100 * sc)}px ${padH}px`, paddingBottom: padBottom, gap }}>
 
-        {/* Nombre del cliente — primer slide, sobre el título */}
-        {isFirst && clientName && !showNovaBadge && (
+        {/* Nombre del cliente — primer slide, solo si el título no lo repite */}
+        {isFirst && clientName && !showNovaBadge && !tokens.map(t => t.text).join(' ').toLowerCase().includes(clientName.toLowerCase()) && (
           <div style={{ opacity: interpolate(frame, [4, 18], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }), transform: `translateY(${interpolate(frame, [4, 18], [14, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })}px)`, display: 'flex', alignItems: 'center', gap: Math.round(8 * sc), alignSelf: isLandscape ? 'center' : 'flex-start' }}>
             <div style={{ width: Math.round(6 * sc), height: Math.round(6 * sc), borderRadius: '50%', background: c1 }} />
             <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: badgeSize, color: `rgba(${hexToRgb(c1)},0.9)`, fontWeight: 700, letterSpacing: 1 }}>
