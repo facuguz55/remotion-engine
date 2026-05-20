@@ -47,12 +47,12 @@ Cada slide tiene estos campos:
   - type: "list", items: array de { label: string, icon?: emoji }
 
 REGLAS CRÍTICAS:
-- Usá SOLAMENTE la información que el usuario te provee en "Instrucciones específicas". NO inventés nada.
-- Si el usuario no da próximos pasos, no los inventes. Usá solo lo que está escrito.
-- UN tema por slide — no mezclés dos cosas distintas en el mismo slide.
-- Primer slide: qué fue la sesión (ej: "Hoy trabajamos en X" o "Sesión con [cliente]: X"). Sin hook de redes sociales.
-- Slides del medio: organizá exactamente lo que se hizo, decisión por decisión, tarea por tarea.
-- Último slide: próximos pasos concretos (solo si el usuario los mencionó). Si no los mencionó, hacé un slide de cierre simple.
+- Basate en lo que el usuario te da, pero podés agregar un poco de contexto o detalle para enriquecer. No inventes cosas que contradigan lo que dijo.
+- Agrupá tareas o decisiones relacionadas en el mismo slide — no hagas un slide por cada cosita mínima.
+- PRIORIDAD: usá graphic type "list" para listar lo que se hizo. Si hay métricas o números, usá "stats". Preferí gráficos sobre texto puro.
+- Primer slide: título claro de la sesión (qué se trabajó). Sin hook de redes sociales, sin frases exageradas.
+- Slides del medio: organizá lo que se hizo agrupando temas relacionados. Usá list graphics cuando puedas.
+- Último slide: próximos pasos. Si el usuario no los mencionó, escribí algo razonable basado en el contexto.
 - NUNCA uses: lenguaje de ventas, ganchos, frases exageradas, "¿arrancamos?", "escribinos", "activamos el siguiente nivel", ni nada que suene a publicidad.
 - Español rioplatense (vos, no tú), tono profesional pero cercano.
 - Mín 3, máx 5 slides.
@@ -73,11 +73,11 @@ Cada slide tiene estos campos:
 REGLAS CRÍTICAS:
 - NUNCA uses palabras genéricas como: "implementado", "logrado", "resultado", "conversión", "potencial", "sinergias", "estrategia integral"
 - SIEMPRE escribí con palabras concretas y específicas del negocio del cliente
-- Cada slide habla de UNA sola cosa — no mezclés dos temas distintos en el mismo slide
-- NO inventes información que no esté en las instrucciones del usuario
+- Agrupá temas relacionados en el mismo slide — si dos ideas se conectan (ej: carrito + compras), van juntas
+- Podés agregar contexto creativo relevante para enriquecer los slides, siempre dentro del rubro del cliente
+- PRIORIDAD: usá graphic en la mayoría de slides. Solo el primero y el último van sin graphic. Los slides del medio DEBEN tener graphic (stats, bars o list) salvo que sea imposible
 - Primer slide: hook que genere curiosidad o duela al lector, sin graphic, sin badge de agencia
 - Último slide: CTA específico para el cliente (no genérico), sin graphic
-- Slides del medio: variá entre texto puro y slides con graphic
 - Español rioplatense (vos, no tú), tono directo y natural
 - Mín 4, máx 6 slides
 - El video es PARA el cliente o SOBRE el cliente — no promoción de Nova Agency (salvo que el template lo pida)
