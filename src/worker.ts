@@ -180,9 +180,13 @@ async function processJob(job: Record<string, unknown>) {
       : []
     const brandColors = jobBrandColors?.length ? jobBrandColors : clientColors.length ? clientColors : ['#ff8c42', '#6366f1']
 
-    const framesPerSlide       = ((job.props as Record<string, unknown>)?.frames_per_slide as number) || null
-    const totalDurationSeconds = ((job.props as Record<string, unknown>)?.total_duration_seconds as number) || null
-    console.log(`⚙️  Props recibidos — frames_per_slide: ${framesPerSlide}, total_duration_seconds: ${totalDurationSeconds}, format: ${(job.props as Record<string, unknown>)?.format}`)
+    // Leer con Number() para asegurar que sea un número (Supabase JSONB puede devolver string en algunos contextos)
+    const rawFPS  = (job.props as Record<string, unknown>)?.frames_per_slide
+    const rawTDS  = (job.props as Record<string, unknown>)?.total_duration_seconds
+    const framesPerSlide       = rawFPS  ? Number(rawFPS)  : null
+    const totalDurationSeconds = rawTDS  ? Number(rawTDS)  : null
+    console.log(`⚙️  Props recibidos — frames_per_slide: ${framesPerSlide} (raw: ${rawFPS}), total_duration_seconds: ${totalDurationSeconds} (raw: ${rawTDS}), format: ${(job.props as Record<string, unknown>)?.format}`)
+    console.log(`⚙️  Job props completos: ${JSON.stringify(job.props)}`)
 
     const inputProps = {
       clientName: client.name,
@@ -193,6 +197,7 @@ async function processJob(job: Record<string, unknown>) {
       clientImageUrl: (client.photo_url as string) || null,
       ...(totalDurationSeconds ? { totalDurationSeconds } : framesPerSlide ? { framesPerSlide } : {}),
     }
+    console.log(`⚙️  inputProps.totalDurationSeconds: ${(inputProps as Record<string, unknown>).totalDurationSeconds ?? 'NO SETEADO'}, framesPerSlide: ${(inputProps as Record<string, unknown>).framesPerSlide ?? 'NO SETEADO'}`)
 
     await supabase.from('video_jobs').update({
       props: { ...(job.props as Record<string, unknown>), generated_slides: slides, input_props: inputProps },
