@@ -182,6 +182,7 @@ async function processJob(job: Record<string, unknown>) {
 
     const framesPerSlide       = ((job.props as Record<string, unknown>)?.frames_per_slide as number) || null
     const totalDurationSeconds = ((job.props as Record<string, unknown>)?.total_duration_seconds as number) || null
+    console.log(`⚙️  Props recibidos — frames_per_slide: ${framesPerSlide}, total_duration_seconds: ${totalDurationSeconds}, format: ${(job.props as Record<string, unknown>)?.format}`)
 
     const inputProps = {
       clientName: client.name,
