@@ -43,15 +43,24 @@ Este resumen se le manda al cliente como actualización — NO es un video de re
 Cada slide tiene estos campos:
 - title: título descriptivo y claro (máx 8 palabras). Podés usar *asteriscos* en 1-2 palabras clave.
 - body: detalle opcional (máx 20 palabras, información concreta)
-- graphic: objeto opcional tipo "list" para listar ítems concretos (máx 4 items)
-  - type: "list", items: array de { label: string, icon?: emoji }
+- graphic: objeto visual recomendado para listar lo que se hizo (NO en el primer ni último slide)
+  Estructura: { "type": "...", "items": [...] }
+  Tipos disponibles para sesión:
+  - "checklist": tareas completadas con checkmark animado. items: { label, description?: string, icon?: emoji }
+    USAR cuando: se completaron tareas, se aprobaron cambios, se terminaron implementaciones
+  - "list": lista simple con borde de color. items: { label, icon?: emoji }
+    USAR cuando: hay varios temas trabajados sin checkmark implícito
+  - "stats": métricas con contador animado. items: { label, value: "+X%" o número, icon?: emoji }
+    USAR cuando: hay números, cifras, métricas concretas
+  - "cards": grid de tarjetas. items: { label, icon?, description? }
+    USAR cuando: hay múltiples temas/áreas trabajadas con descripción
 
 REGLAS CRÍTICAS:
-- Basate en lo que el usuario te da, pero podés agregar un poco de contexto o detalle para enriquecer. No inventes cosas que contradigan lo que dijo.
+- Basate en lo que el usuario te da. Podés agregar contexto o detalle razonable. No inventes cosas que contradigan lo que dijo.
 - Agrupá tareas o decisiones relacionadas en el mismo slide — no hagas un slide por cada cosita mínima.
-- PRIORIDAD: usá graphic type "list" para listar lo que se hizo. Si hay métricas o números, usá "stats". Preferí gráficos sobre texto puro.
+- PRIORIDAD GRÁFICOS: cada slide del medio debe tener graphic. Si se completaron tareas → checklist. Si hay datos → stats. Si hay múltiples áreas → cards. Si es una lista simple → list.
 - Primer slide: título claro de la sesión (qué se trabajó). Sin hook de redes sociales, sin frases exageradas.
-- Slides del medio: organizá lo que se hizo agrupando temas relacionados. Usá list graphics cuando puedas.
+- Slides del medio: organizá lo que se hizo agrupando temas relacionados. Priorizá checklist y cards sobre list.
 - Último slide: próximos pasos. Si el usuario no los mencionó, escribí algo razonable basado en el contexto.
 - NUNCA uses: lenguaje de ventas, ganchos, frases exageradas, "¿arrancamos?", "escribinos", "activamos el siguiente nivel", ni nada que suene a publicidad.
 - Español rioplatense (vos, no tú), tono profesional pero cercano.
@@ -64,18 +73,52 @@ Cada slide tiene estos campos:
 - title: texto impactante (máx 8 palabras). Usá *asteriscos* para resaltar 1-2 palabras clave importantes.
 - body: texto secundario opcional (máx 20 palabras, dato concreto o explicación clara)
 - highlight: badge corto opcional (3-4 palabras máx, ej: "3X más ventas", "Resultados reales", "¿Lo hacemos?")
-- graphic: objeto opcional para slides de datos/features (NO en el primero ni el último)
-  - type: "stats" | "bars" | "list"
-  - items: array de { label: string, value?: string, icon?: emoji }
-  - "stats": máx 3 métricas concretas (ej: "+150%", "×3", "2.400")
-  - "list": máx 4 items de features o pasos
+- graphic: objeto visual OBLIGATORIO en la mayoría de slides del medio (NO en el primero ni el último)
+  Estructura: { "type": "...", "items": [...] }
+  Cada item: { "label": "texto", "value": "dato o 'sent'", "icon": "emoji", "description": "texto corto" }
+
+  ═══ TIPOS DISPONIBLES ═══
+
+  "stats" — métricas con contador animado. Máx 3 items.
+    Cuándo usarlo: hay números, porcentajes, cifras de crecimiento
+    items: { label, value: "+150%" o "×3" o "2.400", icon }
+    Ejemplo: ventas +150%, seguidores +2400, ROI ×3
+
+  "bars" — barras de comparación animadas. Máx 4 items.
+    Cuándo usarlo: hay antes/después, comparación entre períodos o categorías
+    items: { label, value: "número sin símbolo", icon }
+
+  "cards" — grid de tarjetas con ícono + título + descripción. Máx 4 items.
+    Cuándo usarlo: hay múltiples servicios, features, automatizaciones o beneficios
+    items: { label: "nombre del servicio", icon: "emoji", description: "qué hace en 5 palabras" }
+    Ejemplo: { label: "Recupero de carrito", icon: "🛒", description: "Mensajes automáticos al que no compró" }
+
+  "phone" — simulación de chat/WhatsApp animado. Máx 5 mensajes.
+    Cuándo usarlo: hay un bot, respuestas automáticas, WhatsApp, atención al cliente, flujo de ventas
+    items: { label: "texto del mensaje", value: "sent" (si lo escribe el cliente) o sin value (si lo escribe el bot), icon: opcional }
+    Ejemplo: [{ label: "¿Tienen en talle M?", value: "sent" }, { label: "¡Sí! Talle M disponible 🧥 ¿Te reservo uno?" }]
+
+  "checklist" — lista con checkmarks animados. Máx 4 items.
+    Cuándo usarlo: hay tareas completadas, servicios incluidos, pasos terminados, logros concretos
+    items: { label: "qué se hizo", icon: opcional, description: "detalle opcional" }
+
+  "reveal" — aparición dramática de ítems grandes uno por uno. Máx 4 items.
+    Cuándo usarlo: hay nombres de clientes/marcas, hitos importantes, frases de impacto, logros que quieren destacar
+    items: { label: "TEXTO GRANDE", icon: opcional, description: "detalle pequeño opcional" }
+    Ejemplo: listar clientes, mostrar años de experiencia, mostrar ciudades donde operan
+
+  "list" — lista simple con borde de color. Máx 4 items.
+    Cuándo usarlo: cuando ningún otro tipo encaja mejor (es el tipo más básico, preferí los otros)
+    items: { label, icon }
 
 REGLAS CRÍTICAS:
 - NUNCA uses palabras genéricas como: "implementado", "logrado", "resultado", "conversión", "potencial", "sinergias", "estrategia integral"
 - SIEMPRE escribí con palabras concretas y específicas del negocio del cliente
-- Agrupá temas relacionados en el mismo slide — si dos ideas se conectan (ej: carrito + compras), van juntas
+- Agrupá temas relacionados en el mismo slide — si dos ideas se conectan, van juntas
 - Podés agregar contexto creativo relevante para enriquecer los slides, siempre dentro del rubro del cliente
-- PRIORIDAD GRÁFICOS: de los slides del medio, AL MENOS el 80% debe tener graphic. Si hay números → stats. Si hay comparación → bars. Si hay lista de items/pasos/features → list. Solo usá texto puro cuando no haya nada que mostrar visualmente.
+- PRIORIDAD GRÁFICOS MÁXIMA: TODOS los slides del medio deben tener graphic. Sin excepción. El único slide sin graphic es el primero y el último.
+- VARIÁ los tipos: nunca uses el mismo tipo dos veces seguidas. Si el video tiene 5 slides del medio, intentá usar al menos 3 tipos distintos.
+- Criterio de elección: ¿hay números? → stats. ¿hay un bot/chat? → phone. ¿hay servicios/features? → cards. ¿hay tareas o pasos completados? → checklist. ¿hay nombres de marcas o impacto visual? → reveal. ¿hay antes/después? → bars.
 - Primer slide: hook que genere curiosidad o duela al lector, sin graphic, sin badge de agencia
 - Último slide: CTA específico para el cliente (no genérico), sin graphic
 - Español rioplatense (vos, no tú), tono directo y natural
@@ -121,7 +164,7 @@ IMPORTANTE: Este video es para/sobre ${client.name}. Usá su nombre, su rubro y 
 
   const response = await anthropic.messages.create({
     model:      'claude-haiku-4-5-20251001',
-    max_tokens: 1024,
+    max_tokens: 2048,
     system:     systemPrompt,
     messages:   [{ role: 'user', content: userMessage }],
   })
